@@ -15,7 +15,7 @@ After publishing this repository to GitHub, install the skills with Codex's `ski
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo jcpinto54/agent-hub-skills \
+  --repo jcpinto54/notion-agent-hub-skills \
   --path skills/set-agent-hub-api-key \
   --path skills/manage-agent-hub-issues \
   --path skills/init-agent-hub \
