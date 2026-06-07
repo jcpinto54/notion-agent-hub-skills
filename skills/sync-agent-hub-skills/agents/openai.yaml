@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sync Agent Hub Skills"
+  short_description: "Sync local Agent Hub skills to git"
+  default_prompt: "Use $sync-agent-hub-skills to discover the Agent Hub skills repo, sync installed local skills into it, validate, commit, and push."
