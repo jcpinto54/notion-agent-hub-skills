@@ -7,6 +7,8 @@ description: Claim, check, renew, or release Agent Hub ownership leases for impl
 
 Use the bundled direct Notion API script for ownership leases. The script writes only status, owner, claim fields, and optional repo metadata properties.
 
+Important: the script does not create git branches or worktrees. After a successful claim, the agent must create or verify the required worktree before touching repo files.
+
 ## Claim Work
 
 Run:
@@ -30,7 +32,30 @@ The script refuses the claim unless:
 - all `Depends On` issues are `Completed`
 - no unexpired claim exists
 
-After the script succeeds, create the branch/worktree if repo work is expected and record any missing metadata through `update-agent-hub-issue`.
+After the script succeeds, create or reuse the worktree before touching repo files:
+
+```bash
+git fetch origin '<base>'
+git worktree add -B '<branch>' '<path>' 'origin/<base>'
+git -C '<path>' status --short --branch
+```
+
+If the issue branch already exists remotely, use the remote branch instead of resetting from the base:
+
+```bash
+git fetch origin '<branch>'
+git worktree add '<path>' 'origin/<branch>'
+git -C '<path>' status --short --branch
+```
+
+If the worktree path already exists, verify it matches the intended issue branch before using it:
+
+```bash
+git -C '<path>' branch --show-current
+git -C '<path>' status --short --branch
+```
+
+Record any missing branch/worktree metadata through `update-agent-hub-issue`, especially when the hub database lacks `Base Branch`, `Branch`, or `Worktree Path` properties.
 
 ## Claim Review
 
@@ -52,6 +77,16 @@ The script refuses review unless:
 - the issue has durable artifact evidence in `PR URL`, `Commit SHA`, or `Related Links`
 
 Use `--allow-missing-artifacts` only when the issue type is intentionally non-repo/non-artifact and the page body itself is sufficient.
+
+After a successful review claim for repo-backed work, create a clean sibling review worktree from the PR head branch before reviewing. Fetch the PR evidence from `PR URL`, `Commit SHA`, `Related Links`, or the page body, then run:
+
+```bash
+git fetch origin '<pr-head-branch>'
+git worktree add '<review-worktree-path>' 'origin/<pr-head-branch>'
+git -C '<review-worktree-path>' status --short --branch
+```
+
+Review from that worktree, not from the caller's current dirty workspace. If the review worktree already exists, verify its current branch and status before using it.
 
 ## Check Or Renew
 
@@ -81,4 +116,3 @@ Supported modes:
 ## Optimistic Locking
 
 Every claim writes a unique `Claim ID`, immediately refetches the page, and succeeds only if the claim ID still matches. If verification fails, stop and inspect the issue manually.
-

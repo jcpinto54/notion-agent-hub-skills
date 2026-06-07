@@ -190,6 +190,15 @@ def has_active_claim(issue: Issue, now: datetime | None = None) -> bool:
 
 
 def readiness(issue: Issue, by_id: dict[str, Issue]) -> tuple[str, str]:
+    if issue.status == "In Review":
+        reasons: list[str] = []
+        if issue.owner and not is_unassigned(issue.owner):
+            reasons.append(f"owned by {issue.owner}")
+        if has_active_claim(issue):
+            reasons.append("active claim")
+        if reasons:
+            return "Blocked", "; ".join(reasons)
+        return "Ready", "ready for review"
     if issue.status != "Not Started":
         return "-", ""
     reasons: list[str] = []
@@ -258,42 +267,87 @@ def dependency_titles(ids: list[str], by_id: dict[str, Issue]) -> str:
     return ", ".join(short(by_id.get(item_id).title if item_id in by_id else item_id, 28) for item_id in ids)
 
 
+def render_board(
+    lines: list[str],
+    title: str,
+    rows: list[tuple[Issue, str, str]],
+    by_id: dict[str, Issue],
+    start_number: int,
+) -> int:
+    lines.append(f"### {title}")
+    if not rows:
+        lines.append("No issues.")
+        lines.append("")
+        return start_number
+
+    lines.append("| # | Issue | Status | Owner | Priority | Type | Depends On | Reason |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    number = start_number
+    for issue, ready, reason in rows:
+        title_text = short(issue.title, 56)
+        linked = f"[{title_text}]({issue.url})" if issue.url else title_text
+        reason_text = issue.blockers or reason or ready
+        lines.append(
+            f"| {number} | {linked} | {short(issue.status, 18)} | {short(issue.owner)} | "
+            f"{short(issue.priority, 12)} | {short(issue.type, 18)} | "
+            f"{dependency_titles(issue.depends_on, by_id)} | {short(reason_text, 44)} |"
+        )
+        number += 1
+    lines.append("")
+    return number
+
+
 def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit: int) -> str:
     counts = {status: 0 for status in STATUS_ORDER}
     for issue, _, _ in rows:
         if issue.status in counts:
             counts[issue.status] += 1
 
-    visible = rows[:limit]
+    eligible_not_started_rows = [row for row in rows if row[0].status == "Not Started" and row[1] == "Ready"]
+    eligible_in_review_rows = [row for row in rows if row[0].status == "In Review" and row[1] == "Ready"]
+    blocked_rows = [row for row in rows if row[1] in {"Blocked", "Unknown"}]
+    eligible_not_started_visible = eligible_not_started_rows[:limit]
+    eligible_in_review_visible = eligible_in_review_rows[:limit]
+    blocked_visible = blocked_rows[:limit]
     lines = ["## Agent Hub Issues", ""]
     lines.append(
         "Counts: "
         + " | ".join(f"{status} `{counts[status]}`" for status in STATUS_ORDER)
     )
     lines.append("")
+    lines.append(
+        f"Eligible to pick up: Not Started `{len(eligible_not_started_rows)}` | "
+        f"In Review `{len(eligible_in_review_rows)}` | "
+        f"Blocked: `{len(blocked_rows)}` | Completed: `{counts['Completed']}`"
+    )
+    lines.append("")
+
     number = 1
-    for status in STATUS_ORDER:
-        lines.append(f"### {status}")
-        group = [(issue, ready, reason) for issue, ready, reason in visible if issue.status == status]
-        if not group:
-            lines.append("No issues.")
-            lines.append("")
-            continue
-        lines.append("| # | Issue | Owner | Priority | Type | Ready | Depends On | Blockers |")
-        lines.append("|---|---|---|---|---|---|---|---|")
-        for issue, ready, reason in group:
-            title = short(issue.title, 56)
-            linked = f"[{title}]({issue.url})" if issue.url else title
-            blockers = short(issue.blockers or reason, 44)
-            lines.append(
-                f"| {number} | {linked} | {short(issue.owner) or '-'} | "
-                f"{short(issue.priority, 12)} | {short(issue.type, 18)} | {ready} | "
-                f"{dependency_titles(issue.depends_on, by_id)} | {blockers} |"
-            )
-            number += 1
-        lines.append("")
-    if len(rows) > limit:
-        lines.append(f"Showing {limit} of {len(rows)} issues. Add filters or use --limit to see more.")
+    number = render_board(lines, "Eligible (Not Started)", eligible_not_started_visible, by_id, number)
+    number = render_board(lines, "Eligible (In Review)", eligible_in_review_visible, by_id, number)
+    number = render_board(lines, "Blocked", blocked_visible, by_id, number)
+
+    if len(eligible_not_started_rows) > limit:
+        lines.append(
+            f"Showing {limit} of {len(eligible_not_started_rows)} eligible Not Started issues. "
+            "Increase --limit to see more."
+        )
+    if len(eligible_in_review_rows) > limit:
+        lines.append(
+            f"Showing {limit} of {len(eligible_in_review_rows)} eligible In Review issues. "
+            "Increase --limit to see more."
+        )
+    if len(blocked_rows) > limit:
+        lines.append(
+            f"Showing {limit} of {len(blocked_rows)} blocked issues. Increase --limit to see more."
+        )
+    eligible_total = len(eligible_not_started_rows) + len(eligible_in_review_rows)
+    if eligible_total > 10:
+        lines.append("Subagent pickup is capped at 10 eligible issues in one pass.")
+    lines.append("")
+    lines.append(
+        "Do you want to spawn subagents for the eligible issues (up to 10), or explore the completed issues?"
+    )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -372,4 +426,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

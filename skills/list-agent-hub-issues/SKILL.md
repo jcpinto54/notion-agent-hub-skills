@@ -27,9 +27,15 @@ python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format j
 
 ## What The Script Computes
 
-- Groups by status in order: `Not Started`, `In Progress`, `In Review`, `Completed`.
+- Renders three Markdown boards by default, in order: `Eligible (Not Started)`, `Eligible (In Review)`, and `Blocked`.
+- Shows each listed issue's current status in the board output.
+- Treats unblocked, unowned `Not Started` issues as implementation pickup candidates.
+- Treats unowned `In Review` issues without an active claim as review pickup candidates.
+- Includes completed issue count in the summary and finishes by asking whether to spawn subagents for eligible issues, capped at 10, or explore completed issues.
+- Groups and counts statuses in order: `Not Started`, `In Progress`, `In Review`, `Completed`.
 - Sorts by priority `P0` to `P3`, then newest update first.
-- Computes readiness from status, owner, blockers, active claim, and dependency statuses.
+- Computes `Not Started` readiness from owner, blockers, active claim, and dependency statuses.
+- Computes `In Review` readiness from owner and active claim.
 - Uses one data source query for dependency status lookup, avoiding N+1 dependency fetches for normal hubs.
 - Flags expired and active claims through `Claim ID` and `Claim Expires At`.
 
@@ -38,4 +44,3 @@ python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format j
 - Do not create, update, delete, claim, or release anything with this skill.
 - If the user asks to modify a listed issue, switch to the appropriate create, claim, update, or review skill.
 - Issue numbers in the Markdown output are per-response references only. Do not persist them.
-
