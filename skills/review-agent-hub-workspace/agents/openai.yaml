@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Agent Hub Workspace"
+  short_description: "Audit hub hygiene and stale claims"
+  default_prompt: "Use $review-agent-hub-workspace to audit this Agent Hub board."

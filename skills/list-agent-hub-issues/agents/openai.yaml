@@ -1,0 +1,4 @@
+interface:
+  display_name: "List Agent Hub Issues"
+  short_description: "List hub issues and readiness"
+  default_prompt: "Use $list-agent-hub-issues to show ready-to-start Agent Hub work."

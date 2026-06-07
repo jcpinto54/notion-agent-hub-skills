@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claim Agent Hub Issue"
+  short_description: "Claim and release hub ownership"
+  default_prompt: "Use $claim-agent-hub-issue to claim this Agent Hub issue safely."

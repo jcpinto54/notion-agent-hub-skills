@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Agent Hub Issue"
+  short_description: "Create durable Agent Hub issues"
+  default_prompt: "Use $create-agent-hub-issue to add a durable issue to this Agent Hub."

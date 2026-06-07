@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Agent Hub Issue"
+  short_description: "Review In Review hub issues"
+  default_prompt: "Use $review-agent-hub-issue to independently review this In Review issue."

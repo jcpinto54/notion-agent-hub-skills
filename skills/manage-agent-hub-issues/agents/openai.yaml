@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Agent Hub Issues"
+  short_description: "Route Agent Hub issue workflows"
+  default_prompt: "Use $manage-agent-hub-issues to coordinate this Agent Hub issue workflow."

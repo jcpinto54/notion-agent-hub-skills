@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Agent Hub Issue"
+  short_description: "Progress, handoff, or submit issues"
+  default_prompt: "Use $update-agent-hub-issue to report progress and submit this work for review."
