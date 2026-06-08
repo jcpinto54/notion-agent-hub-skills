@@ -4,6 +4,7 @@ Reusable Codex skills for coordinating multi-agent work in a Notion Agent Hub.
 
 The suite keeps automation intentionally small:
 
+- `dry-mece` provides generic DRY and MECE reasoning context for code, planning, research, docs, and skill design.
 - `set-agent-hub-api-key` validates and stores `NOTION_AGENT_HUB_TOKEN`.
 - `list-agent-hub-issues` lists hub issues and computes readiness through the Notion API.
 - `claim-agent-hub-issue` manages optimistic ownership leases for work and review.
@@ -19,6 +20,7 @@ After publishing this repository to GitHub, install the skills with Codex's `ski
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
   --repo jcpinto54/notion-agent-hub-skills \
   --path \
+  skills/dry-mece \
   skills/set-agent-hub-api-key \
   skills/manage-agent-hub-issues \
   skills/init-agent-hub \

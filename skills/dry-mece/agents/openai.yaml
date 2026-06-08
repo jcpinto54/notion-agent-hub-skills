@@ -1,0 +1,4 @@
+interface:
+  display_name: "DRY and MECE"
+  short_description: "Apply non-overlap and no-duplication"
+  default_prompt: "Use $dry-mece to review this for duplicated logic and non-MECE structure."

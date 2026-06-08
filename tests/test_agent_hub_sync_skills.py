@@ -66,6 +66,9 @@ def make_local_and_repo(tmp: Path) -> tuple[Path, Path]:
 
 
 class AgentHubSyncSkillsTests(unittest.TestCase):
+    def test_expected_skills_include_dry_mece_context_skill(self):
+        self.assertIn("dry-mece", sync_mod.EXPECTED_SKILLS)
+
     def test_expected_skills_include_iteration_orchestrator(self):
         self.assertIn("iterate-agent-hub-work", sync_mod.EXPECTED_SKILLS)
 

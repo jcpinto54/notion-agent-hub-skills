@@ -14,6 +14,7 @@ from pathlib import Path
 
 DEFAULT_LOCAL_SKILLS_DIR = Path.home() / ".codex" / "skills"
 EXPECTED_SKILLS = [
+    "dry-mece",
     "setup-agent-hub",
     "manage-agent-hub-issues",
     "init-agent-hub",
