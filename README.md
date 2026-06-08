@@ -7,6 +7,7 @@ The suite keeps automation intentionally small:
 - `set-agent-hub-api-key` validates and stores `NOTION_AGENT_HUB_TOKEN`.
 - `list-agent-hub-issues` lists hub issues and computes readiness through the Notion API.
 - `claim-agent-hub-issue` manages optimistic ownership leases for work and review.
+- `iterate-agent-hub-work` spawns subagents for one ready-issue iteration without redefining readiness or claim rules.
 - `sync-agent-hub-skills` copies installed Agent Hub skills back to the repo, validates, commits, and pushes.
 - The remaining skills guide creation, updates, review decisions, and workspace hygiene through Notion MCP and durable issue records.
 
@@ -24,6 +25,7 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
   skills/create-agent-hub-issue \
   skills/list-agent-hub-issues \
   skills/claim-agent-hub-issue \
+  skills/iterate-agent-hub-work \
   skills/update-agent-hub-issue \
   skills/review-agent-hub-issue \
   skills/review-agent-hub-workspace \

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Iterate Agent Hub Work"
+  short_description: "Spawn agents for ready hub issues"
+  default_prompt: "Use $iterate-agent-hub-work to spawn agents for one Agent Hub iteration."

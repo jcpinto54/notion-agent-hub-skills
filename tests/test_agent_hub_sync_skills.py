@@ -66,6 +66,9 @@ def make_local_and_repo(tmp: Path) -> tuple[Path, Path]:
 
 
 class AgentHubSyncSkillsTests(unittest.TestCase):
+    def test_expected_skills_include_iteration_orchestrator(self):
+        self.assertIn("iterate-agent-hub-work", sync_mod.EXPECTED_SKILLS)
+
     def test_requires_repo_dir(self):
         parser = sync_mod.build_parser()
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):

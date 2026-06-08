@@ -385,9 +385,10 @@ def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue]) -> str:
+def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit: int | None = None) -> str:
     payload = []
-    for issue, ready, reason in rows:
+    visible_rows = rows[:limit] if limit is not None else rows
+    for issue, ready, reason in visible_rows:
         payload.append(
             {
                 "id": issue.id,
@@ -461,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = apply_filters(issues, by_id, args)
 
     if args.format == "json":
-        print(json_rows(rows, by_id))
+        print(json_rows(rows, by_id, args.limit))
     else:
         print(markdown(rows, by_id, args.limit))
     return 0

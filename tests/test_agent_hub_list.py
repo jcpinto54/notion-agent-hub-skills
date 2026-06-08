@@ -136,6 +136,26 @@ class AgentHubListTests(unittest.TestCase):
         json_output = list_mod.json_rows(rows, by_id)
         self.assertIn("work-old", json_output)
 
+    def test_json_output_honors_limit_without_recomputing_readiness(self):
+        pages = [
+            page("ready-1", "Ready 1", "Not Started", "P0", updated_at="2026-06-03T00:00:00Z"),
+            page("ready-2", "Ready 2", "Not Started", "P1", updated_at="2026-06-02T00:00:00Z"),
+            page("ready-3", "Ready 3", "In Review", "P2", updated_at="2026-06-01T00:00:00Z"),
+        ]
+        issues = [list_mod.Issue.from_page(item) for item in pages]
+        issues.sort(key=list_mod.issue_sort_key)
+        by_id = {issue.id: issue for issue in issues}
+        args = SimpleNamespace(
+            status=None, owner=None, priority=None, type=None, area=None, readiness="Ready"
+        )
+        rows = list_mod.apply_filters(issues, by_id, args)
+
+        json_output = list_mod.json_rows(rows, by_id, limit=2)
+
+        self.assertIn("Ready 1", json_output)
+        self.assertIn("Ready 2", json_output)
+        self.assertNotIn("Ready 3", json_output)
+
 
 if __name__ == "__main__":
     unittest.main()
