@@ -80,14 +80,12 @@ def ensure_repo(repo_dir: Path) -> None:
         raise SyncError(f"Repo does not contain skills/: {repo_dir}")
 
     present = {path.name for path in (repo_dir / "skills").iterdir() if path.is_dir()}
-    missing = []
-    for skill in EXPECTED_SKILLS:
-        legacy_names = {old for old, new in LEGACY_SKILL_RENAMES.items() if new == skill}
-        if skill not in present and not (legacy_names & present):
-            missing.append(skill)
-    missing_required = [skill for skill in missing if skill not in OPTIONAL_UNINSTALLED_SKILLS]
-    if missing_required:
-        raise SyncError("Repo is missing expected Agent Hub skills: " + ", ".join(missing_required))
+    legacy_present = {
+        new for old, new in LEGACY_SKILL_RENAMES.items() if old in present
+    }
+    known_present = (present & set(EXPECTED_SKILLS)) | legacy_present
+    if not known_present:
+        raise SyncError(f"Repo does not appear to contain Agent Hub skills: {repo_dir}")
 
 
 def ensure_clean_repo(repo_dir: Path) -> None:

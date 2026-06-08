@@ -1,4 +1,4 @@
 interface:
   display_name: "List Agent Hub Issues"
   short_description: "Show eligible and blocked Agent Hub work"
-  default_prompt: "Use $list-agent-hub-issues to show two boards: eligible issues to pick up and blocked issues, then ask whether to spawn subagents for up to 10 eligible issues or explore completed issues."
+  default_prompt: "Use $list-agent-hub-issues to show eligible, in-review, and blocked Agent Hub issues without modifying or spawning work."

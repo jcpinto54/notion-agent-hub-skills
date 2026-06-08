@@ -16,12 +16,11 @@ Use this skill to start one bounded Agent Hub iteration. This skill is orchestra
 
 ## Workflow
 
-1. Ensure the hub data source is known. If not, use `list-agent-hub-issues` guidance to locate the `Issues / Activities` data source.
+1. Ensure Agent Hub setup exists. If not, use `setup-agent-hub`.
 2. Run the canonical ready-issue listing, capped at 10:
 
 ```bash
 python3 ~/.codex/skills/list-agent-hub-issues/scripts/agent_hub_list.py \
-  --data-source-id '<hub-data-source-id-or-url>' \
   --readiness Ready \
   --format json \
   --limit 10
@@ -48,8 +47,9 @@ Issue:
 
 Rules:
 - Use $claim-agent-hub-issue first. Do not work without a successful claim.
-- If Status is Not Started, claim purpose is work. After claim succeeds, create or verify the required git worktree exactly as $claim-agent-hub-issue instructs before editing files.
-- If Status is In Review, claim purpose is review. After claim succeeds, create a clean review worktree from the PR evidence exactly as $claim-agent-hub-issue instructs before reviewing.
+- If Status is Not Started, claim purpose is work.
+- If Status is In Review, claim purpose is review.
+- After claiming, follow $claim-agent-hub-issue for the required worktree or review worktree setup before touching repo files.
 - Use $update-agent-hub-issue for durable progress, blockers, PR metadata, or handoff notes.
 - Use $review-agent-hub-issue for review completion decisions.
 - If the claim is refused, stop and report the refusal reason. Do not bypass claim or readiness rules.

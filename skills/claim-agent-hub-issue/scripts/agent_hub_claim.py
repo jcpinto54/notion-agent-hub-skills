@@ -6,180 +6,34 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
+import sys
 import uuid
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-
-DEFAULT_ENV_PATH = Path.home() / ".codex" / "agent-hub" / ".env"
-REPO_ENV_NAME = ".agent-hub.local"
-DEFAULT_VERSION = "2026-03-11"
-TOKEN_KEY = "NOTION_AGENT_HUB_TOKEN"
-DATA_SOURCE_KEY = "NOTION_AGENT_HUB_DATA_SOURCE_ID"
-UNASSIGNED = {"", "unassigned", "none", "n/a"}
 WORK_RELEASE_MODES = {"abandon", "handoff", "blocked", "submitted"}
 REVIEW_RELEASE_MODES = {"review-pass", "review-fail", "review-abandon"}
 
+COMMON_LIB = Path(__file__).resolve().parents[2] / "manage-agent-hub-issues" / "lib"
+sys.path.insert(0, str(COMMON_LIB))
 
-def read_env(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.exists():
-        return values
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'\"")
-    return values
-
-
-def find_repo_root(start: Path | None = None) -> Path | None:
-    current = (start or Path.cwd()).resolve()
-    for candidate in [current, *current.parents]:
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def repo_env_path(start: Path | None = None) -> Path | None:
-    root = find_repo_root(start)
-    return root / REPO_ENV_NAME if root else None
-
-
-def load_config(path: Path | None = None) -> dict[str, str]:
-    values = read_env(DEFAULT_ENV_PATH)
-    repo_path = repo_env_path()
-    if repo_path:
-        values.update(read_env(repo_path))
-    if path:
-        values.update(read_env(path))
-    values.update({key: value for key, value in os.environ.items() if value})
-    return values
-
-
-def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
-    for key, value in load_config(path).items():
-        os.environ.setdefault(key, value)
-
-
-def compact_id(value: str) -> str:
-    match = re.search(r"([0-9a-fA-F]{32})", value.replace("-", ""))
-    if not match:
-        return value
-    raw = match.group(1).lower()
-    return f"{raw[0:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:32]}"
-
-
-class NotionClient:
-    def __init__(self, token: str, version: str = DEFAULT_VERSION) -> None:
-        self.token = token
-        self.version = version
-
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        request = urllib.request.Request(
-            f"https://api.notion.com/v1{path}",
-            data=data,
-            method=method,
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-                "Notion-Version": self.version,
-            },
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Notion API {method} {path} failed: HTTP {exc.code}: {detail}") from exc
-
-    def get_page(self, page_id: str) -> dict[str, Any]:
-        return self.request("GET", f"/pages/{compact_id(page_id)}")
-
-    def update_page(self, page_id: str, properties: dict[str, Any]) -> dict[str, Any]:
-        return self.request("PATCH", f"/pages/{compact_id(page_id)}", {"properties": properties})
-
-    def query_data_source(self, data_source_id: str) -> list[dict[str, Any]]:
-        results: list[dict[str, Any]] = []
-        start_cursor: str | None = None
-        while True:
-            body: dict[str, Any] = {"page_size": 100}
-            if start_cursor:
-                body["start_cursor"] = start_cursor
-            payload = self.request("POST", f"/data_sources/{compact_id(data_source_id)}/query", body)
-            results.extend(payload.get("results", []))
-            if not payload.get("has_more"):
-                return results
-            start_cursor = payload.get("next_cursor")
-
-
-def rich_text(value: str) -> dict[str, Any]:
-    return {"rich_text": [{"type": "text", "text": {"content": value}}]} if value else {"rich_text": []}
-
-
-def select_or_status(value: str, current: dict[str, Any] | None) -> dict[str, Any]:
-    prop_type = (current or {}).get("type")
-    if prop_type == "status":
-        return {"status": {"name": value}}
-    return {"select": {"name": value}}
-
-
-def date_prop(value: datetime | None) -> dict[str, Any]:
-    return {"date": {"start": value.isoformat().replace("+00:00", "Z")} if value else None}
-
-
-def url_or_rich_text(value: str, current: dict[str, Any] | None) -> dict[str, Any]:
-    if (current or {}).get("type") == "url":
-        return {"url": value or None}
-    return rich_text(value)
-
-
-def prop_text(prop: dict[str, Any] | None) -> str:
-    if not prop:
-        return ""
-    kind = prop.get("type")
-    if kind == "title":
-        return "".join(part.get("plain_text", "") for part in prop.get("title", []))
-    if kind == "rich_text":
-        return "".join(part.get("plain_text", "") for part in prop.get("rich_text", []))
-    if kind == "select":
-        return (prop.get("select") or {}).get("name", "")
-    if kind == "status":
-        return (prop.get("status") or {}).get("name", "")
-    if kind == "url":
-        return prop.get("url") or ""
-    if kind == "date":
-        return (prop.get("date") or {}).get("start", "")
-    if kind == "created_time":
-        return prop.get("created_time", "")
-    if kind == "last_edited_time":
-        return prop.get("last_edited_time", "")
-    if kind == "relation":
-        return ", ".join(item.get("id", "") for item in prop.get("relation", []))
-    return ""
-
-
-def prop_relation_ids(prop: dict[str, Any] | None) -> list[str]:
-    if not prop or prop.get("type") != "relation":
-        return []
-    return [item["id"] for item in prop.get("relation", []) if item.get("id")]
-
-
-def prop_datetime(prop: dict[str, Any] | None) -> datetime | None:
-    text = prop_text(prop)
-    if not text:
-        return None
-    try:
-        return datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
+from agent_hub_common import (  # noqa: E402
+    DATA_SOURCE_KEY,
+    DEFAULT_VERSION,
+    TOKEN_KEY,
+    NotionClient,
+    date_prop,
+    is_unassigned,
+    load_config,
+    prop_datetime,
+    prop_relation_ids,
+    prop_text,
+    rich_text,
+    select_or_status,
+    url_or_rich_text,
+)
 
 
 @dataclass
@@ -216,10 +70,6 @@ class Issue:
             related_links=prop_text(props.get("Related Links")),
             props=props,
         )
-
-
-def is_unassigned(owner: str) -> bool:
-    return owner.strip().lower() in UNASSIGNED
 
 
 def active_claim(issue: Issue, now: datetime | None = None) -> bool:

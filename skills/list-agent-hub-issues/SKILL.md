@@ -20,10 +20,10 @@ python3 <skill-dir>/scripts/agent_hub_list.py
 4. Add filters or a one-off data source override as needed:
 
 ```bash
+python3 <skill-dir>/scripts/agent_hub_list.py --readiness Ready
+python3 <skill-dir>/scripts/agent_hub_list.py --status 'In Review'
+python3 <skill-dir>/scripts/agent_hub_list.py --format json
 python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>'
-python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --readiness Ready
-python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --status 'In Review'
-python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format json
 ```
 
 ## What The Script Computes
@@ -32,7 +32,7 @@ python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format j
 - Shows each listed issue's current status in the board output.
 - Treats unblocked, unowned `Not Started` issues as implementation pickup candidates.
 - Treats unowned `In Review` issues without an active claim as review pickup candidates.
-- Includes completed issue count in the summary and finishes by asking whether to spawn subagents for eligible issues, capped at 10, or explore completed issues.
+- Includes completed issue count in the summary.
 - Groups and counts statuses in order: `Not Started`, `In Progress`, `In Review`, `Completed`.
 - Sorts by priority `P0` to `P3`, then newest update first.
 - Computes `Not Started` readiness from owner, blockers, active claim, and dependency statuses.
@@ -43,5 +43,6 @@ python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format j
 ## Safety
 
 - Do not create, update, delete, claim, or release anything with this skill.
+- Do not spawn subagents with this skill. Use `iterate-agent-hub-work` for bounded subagent orchestration.
 - If the user asks to modify a listed issue, switch to the appropriate create, claim, update, or review skill.
 - Issue numbers in the Markdown output are per-response references only. Do not persist them.

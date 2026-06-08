@@ -9,7 +9,7 @@ Use Notion MCP for creation. No direct API script is needed for v1 because issue
 
 ## Workflow
 
-1. Locate the `Issues / Activities` database from a provided hub URL or by searching Notion.
+1. Use the configured `Issues / Activities` data source from `setup-agent-hub`; if setup is missing or the user names another hub, locate the database from the hub URL or by searching Notion.
 2. Fetch the schema and adapt only obvious property mappings.
 3. Write a durable page body with the reason the issue exists, scope, acceptance criteria or expected output, dependencies, and first next step.
 4. Set obvious dependency relations before saving when ordering is clear.
@@ -49,4 +49,3 @@ Next step:
 ```
 
 For follow-ups created during review, link the source issue and set `Depends On` or `Blocks` so downstream tracking reflects the sequencing.
-

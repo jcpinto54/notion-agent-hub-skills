@@ -6,156 +6,29 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+COMMON_LIB = Path(__file__).resolve().parents[2] / "manage-agent-hub-issues" / "lib"
+sys.path.insert(0, str(COMMON_LIB))
 
-DEFAULT_ENV_PATH = Path.home() / ".codex" / "agent-hub" / ".env"
-REPO_ENV_NAME = ".agent-hub.local"
-DEFAULT_VERSION = "2026-03-11"
-TOKEN_KEY = "NOTION_AGENT_HUB_TOKEN"
-DATA_SOURCE_KEY = "NOTION_AGENT_HUB_DATA_SOURCE_ID"
-STATUS_ORDER = ["Not Started", "In Progress", "In Review", "Completed"]
-PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
-UNASSIGNED = {"", "unassigned", "none", "n/a"}
-
-
-def read_env(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.exists():
-        return values
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'\"")
-    return values
-
-
-def find_repo_root(start: Path | None = None) -> Path | None:
-    current = (start or Path.cwd()).resolve()
-    for candidate in [current, *current.parents]:
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def repo_env_path(start: Path | None = None) -> Path | None:
-    root = find_repo_root(start)
-    return root / REPO_ENV_NAME if root else None
-
-
-def load_config(path: Path | None = None) -> dict[str, str]:
-    values = read_env(DEFAULT_ENV_PATH)
-    repo_path = repo_env_path()
-    if repo_path:
-        values.update(read_env(repo_path))
-    if path:
-        values.update(read_env(path))
-    values.update({key: value for key, value in os.environ.items() if value})
-    return values
-
-
-def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
-    for key, value in load_config(path).items():
-        os.environ.setdefault(key, value)
-
-
-def compact_id(value: str) -> str:
-    match = re.search(r"([0-9a-fA-F]{32})", value.replace("-", ""))
-    if not match:
-        return value
-    raw = match.group(1).lower()
-    return f"{raw[0:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:32]}"
-
-
-class NotionClient:
-    def __init__(self, token: str, version: str = DEFAULT_VERSION) -> None:
-        self.token = token
-        self.version = version
-
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        request = urllib.request.Request(
-            f"https://api.notion.com/v1{path}",
-            data=data,
-            method=method,
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-                "Notion-Version": self.version,
-            },
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Notion API {method} {path} failed: HTTP {exc.code}: {detail}") from exc
-
-    def query_data_source(self, data_source_id: str) -> list[dict[str, Any]]:
-        results: list[dict[str, Any]] = []
-        start_cursor: str | None = None
-        while True:
-            body: dict[str, Any] = {"page_size": 100}
-            if start_cursor:
-                body["start_cursor"] = start_cursor
-            payload = self.request("POST", f"/data_sources/{compact_id(data_source_id)}/query", body)
-            results.extend(payload.get("results", []))
-            if not payload.get("has_more"):
-                return results
-            start_cursor = payload.get("next_cursor")
-
-
-def prop_text(prop: dict[str, Any] | None) -> str:
-    if not prop:
-        return ""
-    kind = prop.get("type")
-    if kind == "title":
-        return "".join(part.get("plain_text", "") for part in prop.get("title", []))
-    if kind == "rich_text":
-        return "".join(part.get("plain_text", "") for part in prop.get("rich_text", []))
-    if kind == "select":
-        return (prop.get("select") or {}).get("name", "")
-    if kind == "status":
-        return (prop.get("status") or {}).get("name", "")
-    if kind == "url":
-        return prop.get("url") or ""
-    if kind == "date":
-        return (prop.get("date") or {}).get("start", "")
-    if kind == "created_time":
-        return prop.get("created_time", "")
-    if kind == "last_edited_time":
-        return prop.get("last_edited_time", "")
-    if kind == "people":
-        return ", ".join(person.get("name", "") for person in prop.get("people", []))
-    if kind == "relation":
-        return ", ".join(item.get("id", "") for item in prop.get("relation", []))
-    return ""
-
-
-def prop_relation_ids(prop: dict[str, Any] | None) -> list[str]:
-    if not prop or prop.get("type") != "relation":
-        return []
-    return [item["id"] for item in prop.get("relation", []) if item.get("id")]
-
-
-def prop_datetime(prop: dict[str, Any] | None) -> datetime | None:
-    text = prop_text(prop)
-    if not text:
-        return None
-    try:
-        return datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
+from agent_hub_common import (  # noqa: E402
+    DATA_SOURCE_KEY,
+    DEFAULT_VERSION,
+    PRIORITY_ORDER,
+    STATUS_ORDER,
+    TOKEN_KEY,
+    NotionClient,
+    is_unassigned,
+    load_config,
+    parse_notion_datetime,
+    prop_datetime,
+    prop_relation_ids,
+    prop_text,
+)
 
 
 @dataclass
@@ -201,17 +74,7 @@ class Issue:
 
 
 def page_last_edited(page: dict[str, Any]) -> datetime | None:
-    value = page.get("last_edited_time")
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
-def is_unassigned(owner: str) -> bool:
-    return owner.strip().lower() in UNASSIGNED
+    return parse_notion_datetime(page.get("last_edited_time"))
 
 
 def has_active_claim(issue: Issue, now: datetime | None = None) -> bool:
@@ -375,13 +238,8 @@ def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit:
         lines.append(
             f"Showing {limit} of {len(blocked_rows)} blocked issues. Increase --limit to see more."
         )
-    eligible_total = len(eligible_not_started_rows) + len(eligible_in_review_rows)
-    if eligible_total > 10:
-        lines.append("Subagent pickup is capped at 10 eligible issues in one pass.")
     lines.append("")
-    lines.append(
-        "Do you want to spawn subagents for the eligible issues (up to 10), or explore the completed issues?"
-    )
+    lines.append("Use iterate-agent-hub-work to spawn subagents for eligible issues.")
     return "\n".join(lines).rstrip() + "\n"
 
 

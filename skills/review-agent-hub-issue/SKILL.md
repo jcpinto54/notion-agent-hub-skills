@@ -16,7 +16,6 @@ Review durable evidence, not chat memory. Before reviewing, claim the issue for 
 python3 <claim-skill-dir>/scripts/agent_hub_claim.py claim \
   --purpose review \
   --page-id '<issue>' \
-  --data-source-id '<hub-data-source>' \
   --owner '<reviewer-name>'
 ```
 
@@ -97,4 +96,3 @@ If review cannot be completed, append why and release with `review-abandon`. Lea
 - QA/browser/design: verify repro steps, screenshots, console/network behavior, responsive states, and ranked findings.
 - Decision/open question: verify a durable answer, rationale, alternatives, owner, and downstream work.
 - Docs/planning/handoff: verify accuracy, assumptions, non-goals, dependencies, and next steps.
-

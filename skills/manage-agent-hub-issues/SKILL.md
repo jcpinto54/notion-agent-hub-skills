@@ -10,6 +10,7 @@ Use this skill as the coordination router. Prefer the specialized skill that mat
 - Create hub: `init-agent-hub`
 - Create issue, decision, open question, follow-up, or handoff: `create-agent-hub-issue`
 - List or find ready work: `list-agent-hub-issues`
+- Spawn subagents for one ready-work iteration: `iterate-agent-hub-work`
 - Claim work: `claim-agent-hub-issue`
 - Progress, block, handoff, release, or submit work for review: `update-agent-hub-issue`
 - Review one `In Review` issue: `review-agent-hub-issue`

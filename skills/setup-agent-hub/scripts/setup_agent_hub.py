@@ -5,199 +5,43 @@ from __future__ import annotations
 
 import argparse
 import getpass
-import json
 import os
-import re
-import stat
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Any
 
+COMMON_LIB = Path(__file__).resolve().parents[2] / "manage-agent-hub-issues" / "lib"
+sys.path.insert(0, str(COMMON_LIB))
 
-GLOBAL_ENV_PATH = Path.home() / ".codex" / "agent-hub" / ".env"
-REPO_ENV_NAME = ".agent-hub.local"
-DEFAULT_VERSION = "2026-03-11"
-TOKEN_KEY = "NOTION_AGENT_HUB_TOKEN"
-DATA_SOURCE_KEY = "NOTION_AGENT_HUB_DATA_SOURCE_ID"
-PAGE_URL_KEY = "NOTION_AGENT_HUB_PAGE_URL"
+from agent_hub_common import (  # noqa: E402
+    DATA_SOURCE_KEY,
+    DEFAULT_VERSION,
+    PAGE_URL_KEY,
+    TOKEN_KEY,
+    NotionApiError,
+    NotionClient,
+    compact_id,
+    config_path as shared_config_path,
+    load_config,
+    object_title,
+    validate_mode,
+    write_env,
+)
 
 
 class SetupError(RuntimeError):
     pass
 
 
-def read_env(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.exists():
-        return values
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'\"")
-    return values
-
-
-def format_env(values: dict[str, str]) -> str:
-    ordered = [TOKEN_KEY, DATA_SOURCE_KEY, PAGE_URL_KEY]
-    lines = []
-    for key in ordered:
-        if values.get(key):
-            lines.append(f"{key}={values[key]}")
-    for key in sorted(values):
-        if key not in ordered and values[key]:
-            lines.append(f"{key}={values[key]}")
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def write_env(path: Path, values: dict[str, str]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    existing = read_env(path)
-    existing.update({key: value for key, value in values.items() if value})
-    path.write_text(format_env(existing), encoding="utf-8")
-    path.chmod(stat.S_IRUSR | stat.S_IWUSR)
-
-
-def validate_mode(path: Path) -> None:
-    if not path.exists():
-        return
-    mode = stat.S_IMODE(path.stat().st_mode)
-    if mode != 0o600:
-        path.chmod(0o600)
-
-
-def find_repo_root(start: Path | None = None) -> Path | None:
-    current = (start or Path.cwd()).resolve()
-    for candidate in [current, *current.parents]:
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def repo_env_path(start: Path | None = None) -> Path | None:
-    root = find_repo_root(start)
-    return root / REPO_ENV_NAME if root else None
-
-
 def config_path(args: argparse.Namespace) -> Path:
-    if args.env_path:
-        return args.env_path.expanduser()
-    if args.global_config:
-        return GLOBAL_ENV_PATH
-    if args.repo_local:
-        root_path = repo_env_path()
-        if not root_path:
-            raise SetupError("--repo-local was requested, but no git repository was found.")
-        return root_path
-    root_path = repo_env_path()
-    return root_path if root_path else GLOBAL_ENV_PATH
-
-
-def merged_config(target_path: Path | None = None) -> dict[str, str]:
-    values = read_env(GLOBAL_ENV_PATH)
-    repo_path = repo_env_path()
-    if repo_path:
-        values.update(read_env(repo_path))
-    if target_path and target_path not in {GLOBAL_ENV_PATH, repo_path}:
-        values.update(read_env(target_path))
-    values.update({key: value for key, value in os.environ.items() if value})
-    return values
-
-
-def compact_id(value: str) -> str:
-    match = re.search(r"([0-9a-fA-F]{32})", value.replace("-", ""))
-    if not match:
-        return value
-    raw = match.group(1).lower()
-    return f"{raw[0:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:32]}"
-
-
-def rich_plain_text(value: Any) -> str:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return "".join(part.get("plain_text", "") for part in value if isinstance(part, dict))
-    if isinstance(value, dict):
-        for key in ("plain_text", "name"):
-            if value.get(key):
-                return str(value[key])
-        if value.get("title"):
-            return rich_plain_text(value["title"])
-    return ""
-
-
-def object_title(payload: dict[str, Any]) -> str:
-    for key in ("title", "name"):
-        text = rich_plain_text(payload.get(key))
-        if text:
-            return text
-    return ""
-
-
-class NotionClient:
-    def __init__(self, token: str, version: str = DEFAULT_VERSION) -> None:
-        self.token = token
-        self.version = version
-
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        request = urllib.request.Request(
-            f"https://api.notion.com/v1{path}",
-            data=data,
-            method=method,
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-                "Notion-Version": self.version,
-            },
+    try:
+        return shared_config_path(
+            env_path=args.env_path,
+            repo_local=args.repo_local,
+            global_config=args.global_config,
         )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise SetupError(f"Notion API {method} {path} failed: HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise SetupError(f"Notion API {method} {path} failed: {exc}") from exc
-
-    def search(self, query: str, page_size: int = 20) -> dict[str, Any]:
-        body: dict[str, Any] = {"page_size": page_size}
-        if query:
-            body["query"] = query
-        return self.request("POST", "/search", body)
-
-    def retrieve_data_source(self, data_source_id: str) -> dict[str, Any]:
-        return self.request("GET", f"/data_sources/{compact_id(data_source_id)}")
-
-    def query_data_source(self, data_source_id: str, page_size: int = 1) -> dict[str, Any]:
-        return self.request(
-            "POST",
-            f"/data_sources/{compact_id(data_source_id)}/query",
-            {"page_size": page_size},
-        )
-
-    def retrieve_database(self, database_id: str) -> dict[str, Any]:
-        return self.request("GET", f"/databases/{compact_id(database_id)}")
-
-    def retrieve_page(self, page_id: str) -> dict[str, Any]:
-        return self.request("GET", f"/pages/{compact_id(page_id)}")
-
-    def block_children(self, block_id: str) -> list[dict[str, Any]]:
-        results: list[dict[str, Any]] = []
-        start_cursor: str | None = None
-        while True:
-            query = f"?page_size=100"
-            if start_cursor:
-                query += "&start_cursor=" + urllib.parse.quote(start_cursor)
-            payload = self.request("GET", f"/blocks/{compact_id(block_id)}/children{query}")
-            results.extend(payload.get("results", []))
-            if not payload.get("has_more"):
-                return results
-            start_cursor = payload.get("next_cursor")
+    except RuntimeError as exc:
+        raise SetupError(str(exc)) from exc
 
 
 def notion_search_check(client: NotionClient) -> None:
@@ -224,8 +68,8 @@ def validate_data_source(client: NotionClient, value: str) -> dict[str, str]:
         if not record["id"]:
             record["id"] = data_source_id
         return record
-    except SetupError:
-        client.query_data_source(data_source_id, page_size=1)
+    except NotionApiError:
+        client.query_data_source_once(data_source_id, page_size=1)
         return {"id": data_source_id, "url": value if value.startswith("http") else "", "title": ""}
 
 
@@ -366,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         path = config_path(args)
-        values = merged_config(path)
+        values = load_config(path)
         token = args.token or values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
         if not token and not args.check_only and not args.no_prompt and sys.stdin.isatty():
             token = getpass.getpass("Notion Agent Hub token: ").strip()
@@ -391,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
         action = "validated" if args.check_only else "configured"
         print(f"OK: {action} Agent Hub Notion token{configured} using {path}")
         return 0
-    except SetupError as exc:
+    except (SetupError, NotionApiError) as exc:
         raise SystemExit(str(exc)) from exc
 
 
