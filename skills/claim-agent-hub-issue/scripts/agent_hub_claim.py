@@ -17,21 +17,55 @@ from typing import Any
 
 
 DEFAULT_ENV_PATH = Path.home() / ".codex" / "agent-hub" / ".env"
+REPO_ENV_NAME = ".agent-hub.local"
 DEFAULT_VERSION = "2026-03-11"
+TOKEN_KEY = "NOTION_AGENT_HUB_TOKEN"
+DATA_SOURCE_KEY = "NOTION_AGENT_HUB_DATA_SOURCE_ID"
 UNASSIGNED = {"", "unassigned", "none", "n/a"}
 WORK_RELEASE_MODES = {"abandon", "handoff", "blocked", "submitted"}
 REVIEW_RELEASE_MODES = {"review-pass", "review-fail", "review-abandon"}
 
 
-def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
+def read_env(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
     if not path.exists():
-        return
+        return values
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+        values[key.strip()] = value.strip().strip("'\"")
+    return values
+
+
+def find_repo_root(start: Path | None = None) -> Path | None:
+    current = (start or Path.cwd()).resolve()
+    for candidate in [current, *current.parents]:
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def repo_env_path(start: Path | None = None) -> Path | None:
+    root = find_repo_root(start)
+    return root / REPO_ENV_NAME if root else None
+
+
+def load_config(path: Path | None = None) -> dict[str, str]:
+    values = read_env(DEFAULT_ENV_PATH)
+    repo_path = repo_env_path()
+    if repo_path:
+        values.update(read_env(repo_path))
+    if path:
+        values.update(read_env(path))
+    values.update({key: value for key, value in os.environ.items() if value})
+    return values
+
+
+def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
+    for key, value in load_config(path).items():
+        os.environ.setdefault(key, value)
 
 
 def compact_id(value: str) -> str:
@@ -419,13 +453,16 @@ def command_release(client: NotionClient, args: argparse.Namespace) -> dict[str,
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--env-path", type=Path, default=DEFAULT_ENV_PATH)
+    parser.add_argument("--env-path", type=Path)
     parser.add_argument("--notion-version", default=os.environ.get("NOTION_VERSION", DEFAULT_VERSION))
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     claim = subparsers.add_parser("claim")
     claim.add_argument("--page-id", required=True)
-    claim.add_argument("--data-source-id")
+    claim.add_argument(
+        "--data-source-id",
+        help=f"Notion data source ID or URL. Defaults to {DATA_SOURCE_KEY} from Agent Hub config.",
+    )
     claim.add_argument("--purpose", choices=["work", "review"], required=True)
     claim.add_argument("--owner", required=True)
     claim.add_argument("--ttl-minutes", type=int, default=120)
@@ -462,10 +499,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    load_env(args.env_path)
-    token = os.environ.get("NOTION_AGENT_HUB_TOKEN") or os.environ.get("NOTION_TOKEN")
+    values = load_config(args.env_path)
+    token = values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
     if not token:
-        raise SystemExit("Missing NOTION_AGENT_HUB_TOKEN. Run set-agent-hub-api-key first.")
+        raise SystemExit("Missing NOTION_AGENT_HUB_TOKEN. Run setup-agent-hub first.")
+    if args.command == "claim" and not args.data_source_id:
+        args.data_source_id = values.get(DATA_SOURCE_KEY)
 
     client = NotionClient(token, args.notion_version)
     if args.command == "claim":

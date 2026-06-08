@@ -18,21 +18,55 @@ from typing import Any
 
 
 DEFAULT_ENV_PATH = Path.home() / ".codex" / "agent-hub" / ".env"
+REPO_ENV_NAME = ".agent-hub.local"
 DEFAULT_VERSION = "2026-03-11"
+TOKEN_KEY = "NOTION_AGENT_HUB_TOKEN"
+DATA_SOURCE_KEY = "NOTION_AGENT_HUB_DATA_SOURCE_ID"
 STATUS_ORDER = ["Not Started", "In Progress", "In Review", "Completed"]
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 UNASSIGNED = {"", "unassigned", "none", "n/a"}
 
 
-def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
+def read_env(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
     if not path.exists():
-        return
+        return values
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+        values[key.strip()] = value.strip().strip("'\"")
+    return values
+
+
+def find_repo_root(start: Path | None = None) -> Path | None:
+    current = (start or Path.cwd()).resolve()
+    for candidate in [current, *current.parents]:
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def repo_env_path(start: Path | None = None) -> Path | None:
+    root = find_repo_root(start)
+    return root / REPO_ENV_NAME if root else None
+
+
+def load_config(path: Path | None = None) -> dict[str, str]:
+    values = read_env(DEFAULT_ENV_PATH)
+    repo_path = repo_env_path()
+    if repo_path:
+        values.update(read_env(repo_path))
+    if path:
+        values.update(read_env(path))
+    values.update({key: value for key, value in os.environ.items() if value})
+    return values
+
+
+def load_env(path: Path = DEFAULT_ENV_PATH) -> None:
+    for key, value in load_config(path).items():
+        os.environ.setdefault(key, value)
 
 
 def compact_id(value: str) -> str:
@@ -388,7 +422,11 @@ def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue]) -> st
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-source-id", "--source", required=True, help="Notion data source ID or URL")
+    parser.add_argument(
+        "--data-source-id",
+        "--source",
+        help=f"Notion data source ID or URL. Defaults to {DATA_SOURCE_KEY} from Agent Hub config.",
+    )
     parser.add_argument("--status", choices=STATUS_ORDER)
     parser.add_argument("--owner")
     parser.add_argument("--priority", choices=["P0", "P1", "P2", "P3"])
@@ -398,20 +436,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("--notion-version", default=os.environ.get("NOTION_VERSION", DEFAULT_VERSION))
-    parser.add_argument("--env-path", type=Path, default=DEFAULT_ENV_PATH)
+    parser.add_argument("--env-path", type=Path)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    load_env(args.env_path)
-    token = os.environ.get("NOTION_AGENT_HUB_TOKEN") or os.environ.get("NOTION_TOKEN")
+    values = load_config(args.env_path)
+    token = values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
     if not token:
-        raise SystemExit("Missing NOTION_AGENT_HUB_TOKEN. Run set-agent-hub-api-key first.")
+        raise SystemExit("Missing NOTION_AGENT_HUB_TOKEN. Run setup-agent-hub first.")
+    data_source_id = args.data_source_id or values.get(DATA_SOURCE_KEY)
+    if not data_source_id:
+        raise SystemExit(
+            f"Missing data source. Run setup-agent-hub or pass --data-source-id."
+        )
 
     client = NotionClient(token, args.notion_version)
-    pages = client.query_data_source(args.data_source_id)
+    pages = client.query_data_source(data_source_id)
     issues = [Issue.from_page(page) for page in pages]
     issues.sort(key=issue_sort_key)
     by_id = {issue.id: issue for issue in issues}

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Set Agent Hub API Key"
-  short_description: "Validate and store Agent Hub Notion token"
-  default_prompt: "Use $set-agent-hub-api-key to configure my Agent Hub Notion API token."

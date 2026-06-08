@@ -9,6 +9,8 @@ Use the bundled direct Notion API script for ownership leases. The script writes
 
 Important: the script does not create git branches or worktrees. After a successful claim, the agent must create or verify the required worktree before touching repo files.
 
+Before claiming, ensure `setup-agent-hub` has configured the default `Issues / Activities` data source. Use `--data-source-id` only for one-off hubs or overrides.
+
 ## Claim Work
 
 Run:
@@ -17,7 +19,6 @@ Run:
 python3 <skill-dir>/scripts/agent_hub_claim.py claim \
   --purpose work \
   --page-id '<issue-page-id-or-url>' \
-  --data-source-id '<hub-data-source-id-or-url>' \
   --owner '<agent-name>' \
   --base-branch '<base>' \
   --branch '<branch>' \
@@ -65,7 +66,6 @@ Run:
 python3 <skill-dir>/scripts/agent_hub_claim.py claim \
   --purpose review \
   --page-id '<issue-page-id-or-url>' \
-  --data-source-id '<hub-data-source-id-or-url>' \
   --owner '<reviewer-name>'
 ```
 

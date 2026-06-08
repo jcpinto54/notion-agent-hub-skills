@@ -14,7 +14,7 @@ Use this skill as the coordination router. Prefer the specialized skill that mat
 - Progress, block, handoff, release, or submit work for review: `update-agent-hub-issue`
 - Review one `In Review` issue: `review-agent-hub-issue`
 - Audit workspace hygiene: `review-agent-hub-workspace`
-- Configure direct API token: `set-agent-hub-api-key`
+- Configure Agent Hub token and data source: `setup-agent-hub`
 
 ## Core Rules
 
@@ -40,4 +40,3 @@ Use these properties when present:
 - `Summary`, `Blockers`, `Related Links`, `Created At`, `Updated At`
 
 If a legacy hub lacks claim or repo metadata fields, use `init-agent-hub` guidance to add them with Notion MCP before relying on direct scripts.
-

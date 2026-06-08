@@ -14,7 +14,7 @@ from pathlib import Path
 
 DEFAULT_LOCAL_SKILLS_DIR = Path.home() / ".codex" / "skills"
 EXPECTED_SKILLS = [
-    "set-agent-hub-api-key",
+    "setup-agent-hub",
     "manage-agent-hub-issues",
     "init-agent-hub",
     "create-agent-hub-issue",
@@ -25,6 +25,7 @@ EXPECTED_SKILLS = [
     "review-agent-hub-workspace",
     "sync-agent-hub-skills",
 ]
+LEGACY_SKILL_RENAMES = {"set-agent-hub-api-key": "setup-agent-hub"}
 OPTIONAL_UNINSTALLED_SKILLS = {"sync-agent-hub-skills"}
 EXCLUDED_DIRS = {"__pycache__", ".git"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".swp", ".tmp"}
@@ -77,7 +78,11 @@ def ensure_repo(repo_dir: Path) -> None:
         raise SyncError(f"Repo does not contain skills/: {repo_dir}")
 
     present = {path.name for path in (repo_dir / "skills").iterdir() if path.is_dir()}
-    missing = [skill for skill in EXPECTED_SKILLS if skill not in present]
+    missing = []
+    for skill in EXPECTED_SKILLS:
+        legacy_names = {old for old, new in LEGACY_SKILL_RENAMES.items() if new == skill}
+        if skill not in present and not (legacy_names & present):
+            missing.append(skill)
     missing_required = [skill for skill in missing if skill not in OPTIONAL_UNINSTALLED_SKILLS]
     if missing_required:
         raise SyncError("Repo is missing expected Agent Hub skills: " + ", ".join(missing_required))
@@ -148,6 +153,10 @@ def copy_skill(local_skill: Path, repo_skill: Path) -> None:
 
 def sync_skills(local_skills_dir: Path, repo_dir: Path) -> list[str]:
     synced = []
+    for old, new in LEGACY_SKILL_RENAMES.items():
+        old_repo_skill = repo_dir / "skills" / old
+        if old_repo_skill.exists() and (local_skills_dir / new).exists():
+            shutil.rmtree(old_repo_skill)
     for skill in EXPECTED_SKILLS:
         local_skill = local_skills_dir / skill
         if skill in OPTIONAL_UNINSTALLED_SKILLS and not local_skill.exists():

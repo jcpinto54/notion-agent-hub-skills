@@ -9,17 +9,18 @@ Use the bundled direct Notion API script for read-only listing.
 
 ## Workflow
 
-1. Ensure credentials exist. If not, use `set-agent-hub-api-key`.
-2. Get the Notion data source ID or URL for the hub `Issues / Activities` database.
+1. Ensure Agent Hub setup exists. If not, use `setup-agent-hub`.
+2. Run the list script. It reads the default `Issues / Activities` data source from repo `.agent-hub.local`, then `~/.codex/agent-hub/.env`.
 3. Run:
 
 ```bash
-python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<data-source-id-or-url>'
+python3 <skill-dir>/scripts/agent_hub_list.py
 ```
 
-4. Add filters as needed:
+4. Add filters or a one-off data source override as needed:
 
 ```bash
+python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>'
 python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --readiness Ready
 python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --status 'In Review'
 python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>' --format json
