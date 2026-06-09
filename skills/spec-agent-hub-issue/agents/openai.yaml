@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Agent Hub Issue"
+  short_description: "Turn raw ideas into agent-ready specs"
+  default_prompt: "Use $spec-agent-hub-issue to turn this rough idea into a precise Agent Hub issue spec before it is claimed or included in parallel iteration."

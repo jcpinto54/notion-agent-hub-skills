@@ -19,6 +19,7 @@ EXPECTED_SKILLS = [
     "manage-agent-hub-issues",
     "init-agent-hub",
     "create-agent-hub-issue",
+    "spec-agent-hub-issue",
     "list-agent-hub-issues",
     "claim-agent-hub-issue",
     "iterate-agent-hub-work",

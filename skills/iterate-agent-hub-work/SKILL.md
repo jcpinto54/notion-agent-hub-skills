@@ -9,6 +9,7 @@ Use this skill to start one bounded Agent Hub iteration. This skill is orchestra
 
 ## Canonical Responsibilities
 
+- `spec-agent-hub-issue` owns execution-readiness, spec critique, done criteria, and decomposition before issues enter the parallel queue.
 - `list-agent-hub-issues` owns readiness and ordering.
 - `claim-agent-hub-issue` owns claim/refusal and worktree rules.
 - `update-agent-hub-issue` owns durable progress and PR metadata.
@@ -17,7 +18,8 @@ Use this skill to start one bounded Agent Hub iteration. This skill is orchestra
 ## Workflow
 
 1. Ensure Agent Hub setup exists. If not, use `setup-agent-hub`.
-2. Run the canonical ready-issue listing, capped at 10:
+2. Confirm that work entering this iteration has already passed `spec-agent-hub-issue` or is otherwise clearly scoped with observable done criteria. If an issue is vague, too broad, or missing verification steps, do not reinterpret it here; run `spec-agent-hub-issue` first.
+3. Run the canonical ready-issue listing, capped at 10:
 
 ```bash
 python3 ~/.codex/skills/list-agent-hub-issues/scripts/agent_hub_list.py \
@@ -26,8 +28,8 @@ python3 ~/.codex/skills/list-agent-hub-issues/scripts/agent_hub_list.py \
   --limit 10
 ```
 
-3. For each returned JSON row, spawn one subagent with `multi_agent_v1.spawn_agent`.
-4. Do not wait for completion. Return the issue title, issue URL, status, and spawned agent ID for each subagent.
+4. For each returned JSON row, spawn one subagent with `multi_agent_v1.spawn_agent`.
+5. Do not wait for completion. Return the issue title, issue URL, status, and spawned agent ID for each subagent.
 
 If the listing returns no rows, report that no ready Agent Hub issues were found.
 
@@ -46,6 +48,7 @@ Issue:
 - Priority: <priority>
 
 Rules:
+- This issue should already be execution-ready. If the issue body is too vague to identify scope, done criteria, or verification steps, stop and report that it needs $spec-agent-hub-issue before implementation.
 - Use $claim-agent-hub-issue first. Do not work without a successful claim.
 - If Status is Not Started, claim purpose is work.
 - If Status is In Review, claim purpose is review.

@@ -72,6 +72,9 @@ class AgentHubSyncSkillsTests(unittest.TestCase):
     def test_expected_skills_include_iteration_orchestrator(self):
         self.assertIn("iterate-agent-hub-work", sync_mod.EXPECTED_SKILLS)
 
+    def test_expected_skills_include_spec_gate(self):
+        self.assertIn("spec-agent-hub-issue", sync_mod.EXPECTED_SKILLS)
+
     def test_requires_repo_dir(self):
         parser = sync_mod.build_parser()
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
