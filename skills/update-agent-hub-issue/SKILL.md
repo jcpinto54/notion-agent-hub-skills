@@ -1,11 +1,11 @@
 ---
 name: update-agent-hub-issue
-description: Update Agent Hub issue progress, blockers, handoffs, repo metadata, work claim releases, and In Progress to In Review submissions. Use when a user asks to report progress, pause, block, hand off, release, submit for review, attach a PR, or move an Agent Hub issue after work has started.
+description: Update Agent Hub issue progress, blockers, handoffs, repo metadata, work claim releases, and In Progress to In Review submissions in repo-native `.hub` issues or legacy Notion hubs. Use when a user asks to report progress, pause, block, hand off, release, submit for review, attach a PR, or move an Agent Hub issue after work has started.
 ---
 
 # Update Agent Hub Issue
 
-Use Notion MCP for rich issue body updates. Use `claim-agent-hub-issue`'s script for claim checks, renewals, and releases.
+For repo-native hubs, append durable entries to `.hub/issues/<issue-id>.md`. For legacy hubs, use Notion MCP for rich issue body updates. Use `claim-agent-hub-issue`'s script for claim checks, renewals, and releases.
 
 ## Required Claim Check
 
@@ -27,6 +27,20 @@ Append a durable activity-log entry. Include:
 - Verification run and results
 - Risks, skipped checks, or unknowns
 - Exact next step
+
+For repo-native hubs, use the append script when a structured progress entry is enough:
+
+```bash
+python3 <skill-dir>/scripts/append_file_activity.py \
+  --issue '<issue-id-or-path>' \
+  --heading Progress \
+  --agent '<agent-name>' \
+  --summary '<what changed>' \
+  --evidence '<files, commands, PRs, logs, or links>' \
+  --verification '<checks and results>' \
+  --risks '<risks or skipped checks>' \
+  --next-step '<next action>'
+```
 
 ## Blocked Or Handoff
 
@@ -86,4 +100,3 @@ python3 <claim-skill-dir>/scripts/agent_hub_claim.py release \
 ```
 
 After release, fetch the issue and verify `Status = In Review`, claim fields are empty, and PR evidence remains.
-

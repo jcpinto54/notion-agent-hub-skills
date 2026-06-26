@@ -1,19 +1,26 @@
 ---
 name: create-agent-hub-issue
-description: Create Notion Agent Hub issues, follow-ups, decisions, open questions, and handoffs. Use when a user asks to add, file, create, record, split, or sequence durable work items in an Agent Hub database.
+description: Create repo-native `.hub` Agent Hub issues or legacy Notion issues, follow-ups, decisions, open questions, and handoffs. Use when a user asks to add, file, create, record, split, or sequence durable work items in an Agent Hub.
 ---
 
 # Create Agent Hub Issue
 
-Use Notion MCP for creation. No direct API script is needed for v1 because issue content requires judgment and rich page-body writing.
+For repo work, create `.hub/issues/<issue-id>.md` as the canonical durable record. Use Notion MCP only for legacy hubs or optional mirror pages.
 
 ## Workflow
 
-1. Use the configured `Issues / Activities` data source from `setup-agent-hub`; if setup is missing or the user names another hub, locate the database from the hub URL or by searching Notion.
-2. Fetch the schema and adapt only obvious property mappings.
-3. Write a durable page body with the reason the issue exists, scope, acceptance criteria or expected output, dependencies, and first next step.
-4. Set obvious dependency relations before saving when ordering is clear.
-5. Create the item and fetch it back to verify properties and body.
+1. If `.hub/config.yml` exists, write a repo-native issue. Otherwise use the configured legacy Notion `Issues / Activities` data source.
+2. Write a durable body with the reason the issue exists, scope, acceptance criteria or expected output, dependencies, and first next step.
+3. Set obvious dependencies before saving when ordering is clear.
+4. Create the item and fetch/read it back to verify metadata and body.
+
+For repo-native creation, use:
+
+```bash
+python3 <skill-dir>/scripts/create_file_issue.py '<title>' --id '<issue-id>' --type Feature --priority P2
+```
+
+Then edit the generated issue body as needed.
 
 ## Defaults
 

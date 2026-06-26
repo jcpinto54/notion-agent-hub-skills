@@ -29,6 +29,13 @@ from agent_hub_common import (  # noqa: E402
     prop_relation_ids,
     prop_text,
 )
+from file_hub_common import (  # noqa: E402
+    has_file_hub,
+    issue_sort_key as file_issue_sort_key,
+    load_issues as load_file_issues,
+    readiness as file_readiness,
+    resolve_hub_path,
+)
 
 
 @dataclass
@@ -282,6 +289,13 @@ def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--backend",
+        choices=["auto", "file", "notion"],
+        default="auto",
+        help="Use repo .hub files, Notion, or auto-detect .hub/config.yml first.",
+    )
+    parser.add_argument("--hub-root", type=Path, help="Path to a repo-native .hub directory.")
+    parser.add_argument(
         "--data-source-id",
         "--source",
         help=f"Notion data source ID or URL. Defaults to {DATA_SOURCE_KEY} from Agent Hub config.",
@@ -299,9 +313,49 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def should_use_file_backend(args: argparse.Namespace) -> bool:
+    if args.backend == "file":
+        return True
+    if args.backend == "notion":
+        return False
+    return has_file_hub(hub_root=args.hub_root)
+
+
+def load_file_rows(args: argparse.Namespace) -> tuple[list[tuple[Any, str, str]], dict[str, Any]]:
+    hub_path = resolve_hub_path(hub_root=args.hub_root)
+    issues = load_file_issues(hub_path)
+    issues.sort(key=file_issue_sort_key)
+    by_id = {issue.id: issue for issue in issues}
+    rows: list[tuple[Any, str, str]] = []
+    for issue in issues:
+        ready, reason = file_readiness(issue, by_id)
+        if args.status and issue.status != args.status:
+            continue
+        if args.owner and args.owner.lower() not in issue.owner.lower():
+            continue
+        if args.priority and issue.priority != args.priority:
+            continue
+        if args.type and issue.type != args.type:
+            continue
+        if args.area and args.area.lower() not in issue.area.lower():
+            continue
+        if args.readiness and ready.lower() != args.readiness.lower():
+            continue
+        rows.append((issue, ready, reason))
+    return rows, by_id
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if should_use_file_backend(args):
+        rows, by_id = load_file_rows(args)
+        if args.format == "json":
+            print(json_rows(rows, by_id, args.limit))
+        else:
+            print(markdown(rows, by_id, args.limit))
+        return 0
+
     values = load_config(args.env_path)
     token = values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
     if not token:

@@ -1,17 +1,67 @@
 # agent-hub-skills
 
-Reusable Codex skills for coordinating multi-agent work in a Notion Agent Hub.
+Reusable Codex skills for coordinating multi-agent work in an Agent Hub.
+
+Agent Hub v2 is hybrid and repo-native by default:
+
+- `.hub/` in each target project repository is the canonical durable store for specs, activity logs, decisions, evidence, and review notes.
+- Notion is optional as a personal dashboard/index or as a legacy backend for existing hubs.
+- Helper scripts default to `--backend auto`, which selects `.hub/config.yml` when present and otherwise falls back to Notion configuration.
 
 The suite keeps automation intentionally small:
 
 - `dry-mece` provides generic DRY and MECE reasoning context for code, planning, research, docs, and skill design.
-- `setup-agent-hub` validates and stores Agent Hub configuration.
-- `list-agent-hub-issues` lists hub issues and computes readiness through the Notion API.
+- `init-agent-hub` creates repo-native `.hub` directories or legacy Notion hubs.
+- `setup-agent-hub` validates and stores legacy Notion Agent Hub configuration.
+- `list-agent-hub-issues` lists hub issues and computes readiness from `.hub` or Notion.
 - `spec-agent-hub-issue` turns raw ideas or rough issues into agent-ready specs before parallel execution.
-- `claim-agent-hub-issue` manages optimistic ownership leases for work and review.
+- `claim-agent-hub-issue` manages optimistic ownership leases for work and review using `.hub/runtime/claims.json` or Notion claim fields.
 - `iterate-agent-hub-work` spawns subagents for one ready-issue iteration without redefining readiness or claim rules.
 - `sync-agent-hub-skills` copies installed Agent Hub skills back to the repo, validates, commits, and pushes.
-- The remaining skills guide creation, updates, review decisions, and workspace hygiene through Notion MCP and durable issue records.
+- The remaining skills guide creation, updates, review decisions, and workspace hygiene through `.hub` files or legacy Notion records.
+
+## Repo-Native Hub Layout
+
+Initialize a target repository:
+
+```bash
+python3 skills/init-agent-hub/scripts/init_file_hub.py --repo /path/to/repo --project-name "Project"
+```
+
+This creates:
+
+```text
+.hub/
+├── config.yml
+├── .gitignore
+├── issues/
+├── decisions/
+├── artifacts/
+└── runtime/      # gitignored live locks
+```
+
+Create a file-backed issue:
+
+```bash
+python3 skills/create-agent-hub-issue/scripts/create_file_issue.py \
+  "Add hybrid file backend" --id add-hybrid-file-backend
+```
+
+List ready work:
+
+```bash
+python3 skills/list-agent-hub-issues/scripts/agent_hub_list.py --backend file --readiness Ready
+```
+
+Claim work:
+
+```bash
+python3 skills/claim-agent-hub-issue/scripts/agent_hub_claim.py claim \
+  --backend file \
+  --page-id add-hybrid-file-backend \
+  --purpose work \
+  --owner Codex
+```
 
 ## Parallel Agent Workflow
 

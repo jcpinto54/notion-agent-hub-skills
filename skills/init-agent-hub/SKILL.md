@@ -1,11 +1,47 @@
 ---
 name: init-agent-hub
-description: Create a reusable Notion Agent Hub for a software project. Use when a user asks to initialize or set up an agent coordination hub, shared task board, AI agent issue tracker, or Notion workspace for multi-agent ownership, dependency, review, and handoff workflows.
+description: Create a reusable Agent Hub for a software project, preferably as a repo-native `.hub` directory with optional Notion mirroring, or as a legacy Notion Agent Hub when requested. Use when a user asks to initialize or set up an agent coordination hub, shared task board, AI agent issue tracker, or workspace for multi-agent ownership, dependency, review, and handoff workflows.
 ---
 
 # Init Agent Hub
 
-Create a Notion root page with one inline `Issues / Activities` database. Use Notion MCP for page, database, schema, and view creation. Do not use the direct Notion API scripts for initialization or migrations.
+Prefer a repo-native `.hub` unless the user explicitly asks for Notion-first setup. The repo-native hub is the canonical store for repo work; Notion is an optional personal dashboard/index.
+
+## Repo-Native Workflow
+
+1. Determine the target repository root.
+2. Run:
+
+```bash
+python3 <skill-dir>/scripts/init_file_hub.py --repo '<repo-path>' --project-name '<Project Name>'
+```
+
+3. Verify these paths exist:
+   - `.hub/config.yml`
+   - `.hub/issues/`
+   - `.hub/decisions/`
+   - `.hub/artifacts/`
+   - `.hub/.gitignore` containing `runtime/`
+4. If the user gave an initial task, create the first issue through `create-agent-hub-issue` or pass `--seed-issue`.
+5. Report the `.hub` path and remind the user that Notion mirroring is optional.
+
+## Repo-Native Layout
+
+```text
+.hub/
+├── config.yml
+├── .gitignore
+├── issues/
+├── decisions/
+├── artifacts/
+└── runtime/      # gitignored active locks and local state
+```
+
+`config.yml` should set `canonical_store: file` and `notion_mirror.enabled: false` by default.
+
+## Legacy Notion Workflow
+
+Create a Notion root page with one inline `Issues / Activities` database only when the user requests Notion-first setup or is maintaining an existing Notion hub. Use Notion MCP for page, database, schema, and view creation. Do not use the direct Notion API scripts for initialization or migrations.
 
 ## Workflow
 
@@ -74,4 +110,3 @@ Use these properties:
 - `In Review`: table filtered to `Status = In Review`; show PR URL, commit SHA, owner, claim expiry, and dependencies.
 - `Recent Updates`: table sorted by `Updated At` descending.
 - `By Type`: board grouped by `Type`.
-

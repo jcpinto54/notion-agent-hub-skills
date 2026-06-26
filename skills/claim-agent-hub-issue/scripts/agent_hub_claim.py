@@ -34,6 +34,15 @@ from agent_hub_common import (  # noqa: E402
     select_or_status,
     url_or_rich_text,
 )
+from file_hub_common import (  # noqa: E402
+    check_issue as file_check_issue,
+    claim_issue as file_claim_issue,
+    has_file_hub,
+    issue_by_id as file_issue_by_id,
+    release_issue as file_release_issue,
+    renew_issue as file_renew_issue,
+    resolve_hub_path,
+)
 
 
 @dataclass
@@ -303,11 +312,27 @@ def command_release(client: NotionClient, args: argparse.Namespace) -> dict[str,
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    backend_kwargs = {
+        "choices": ["auto", "file", "notion"],
+        "help": "Use repo .hub files, Notion, or auto-detect .hub/config.yml first.",
+    }
+    parser.add_argument(
+        "--backend",
+        default="auto",
+        **backend_kwargs,
+    )
+    parser.add_argument(
+        "--hub-root", type=Path, help="Path to a repo-native .hub directory."
+    )
     parser.add_argument("--env-path", type=Path)
-    parser.add_argument("--notion-version", default=os.environ.get("NOTION_VERSION", DEFAULT_VERSION))
+    parser.add_argument(
+        "--notion-version", default=os.environ.get("NOTION_VERSION", DEFAULT_VERSION)
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     claim = subparsers.add_parser("claim")
+    claim.add_argument("--backend", default=argparse.SUPPRESS, **backend_kwargs)
+    claim.add_argument("--hub-root", type=Path, default=argparse.SUPPRESS)
     claim.add_argument("--page-id", required=True)
     claim.add_argument(
         "--data-source-id",
@@ -323,15 +348,21 @@ def build_parser() -> argparse.ArgumentParser:
     claim.add_argument("--allow-missing-artifacts", action="store_true")
 
     check = subparsers.add_parser("check")
+    check.add_argument("--backend", default=argparse.SUPPRESS, **backend_kwargs)
+    check.add_argument("--hub-root", type=Path, default=argparse.SUPPRESS)
     check.add_argument("--page-id", required=True)
     check.add_argument("--claim-id")
 
     renew = subparsers.add_parser("renew")
+    renew.add_argument("--backend", default=argparse.SUPPRESS, **backend_kwargs)
+    renew.add_argument("--hub-root", type=Path, default=argparse.SUPPRESS)
     renew.add_argument("--page-id", required=True)
     renew.add_argument("--claim-id", required=True)
     renew.add_argument("--ttl-minutes", type=int, default=120)
 
     release = subparsers.add_parser("release")
+    release.add_argument("--backend", default=argparse.SUPPRESS, **backend_kwargs)
+    release.add_argument("--hub-root", type=Path, default=argparse.SUPPRESS)
     release.add_argument("--page-id", required=True)
     release.add_argument("--claim-id", required=True)
     release.add_argument(
@@ -346,9 +377,59 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def should_use_file_backend(args: argparse.Namespace) -> bool:
+    if args.backend == "file":
+        return True
+    if args.backend == "notion":
+        return False
+    return has_file_hub(hub_root=args.hub_root)
+
+
+def command_file(args: argparse.Namespace) -> dict[str, Any]:
+    hub_path = resolve_hub_path(hub_root=args.hub_root)
+    issue = file_issue_by_id(hub_path, args.page_id)
+    if args.command == "claim":
+        return file_claim_issue(
+            hub_path=hub_path,
+            issue=issue,
+            purpose=args.purpose,
+            owner=args.owner,
+            ttl_minutes=args.ttl_minutes,
+            claim_id=args.claim_id or f"{args.purpose}-{uuid.uuid4()}",
+            base_branch=args.base_branch or "",
+            branch=args.branch or "",
+            worktree_path=args.worktree_path or "",
+            allow_missing_artifacts=args.allow_missing_artifacts,
+        )
+    if args.command == "check":
+        return file_check_issue(hub_path, issue, args.claim_id or "")
+    if args.command == "renew":
+        return file_renew_issue(hub_path, issue, args.claim_id, args.ttl_minutes)
+    if args.command == "release":
+        return file_release_issue(
+            hub_path=hub_path,
+            issue=issue,
+            claim_id=args.claim_id,
+            mode=args.mode,
+            owner=args.owner or "",
+            blocker=args.blocker or "",
+            commit_sha=args.commit_sha or "",
+            pr_url=args.pr_url or "",
+        )
+    raise SystemExit(f"Unknown command: {args.command}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if should_use_file_backend(args):
+        try:
+            result = command_file(args)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
     values = load_config(args.env_path)
     token = values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
     if not token:
