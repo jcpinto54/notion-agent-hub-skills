@@ -1,0 +1,11 @@
+id: eval-contract
+title: "Agent Hub v3 eval contract"
+status: Draft
+priority: P2
+owner: Unassigned
+issues:
+  - ready-implementation
+depends_on: []
+blocks: []
+created_at: "2026-06-26T00:00:00Z"
+updated_at: "2026-06-26T00:00:00Z"

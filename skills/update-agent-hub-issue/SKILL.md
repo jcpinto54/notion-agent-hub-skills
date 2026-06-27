@@ -32,7 +32,7 @@ For repo-native hubs, use the append script when a structured progress entry is 
 
 ```bash
 python3 <skill-dir>/scripts/append_file_activity.py \
-  --issue '<issue-id-or-path>' \
+  --issue '<issue-id>' \
   --heading Progress \
   --agent '<agent-name>' \
   --summary '<what changed>' \

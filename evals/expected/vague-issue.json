@@ -1,0 +1,35 @@
+{
+  "id": "vague-issue",
+  "fixture": "vague-issue",
+  "evaluations": [
+    {
+      "id": "audit-hub",
+      "command": ["audit", "hub"],
+      "result_file": ".hub/reports/latest-audit.json",
+      "match": "diagnostic_subset",
+      "expected_diagnostics": [
+        {
+          "code": "issue_scope_too_vague",
+          "severity": "error",
+          "target": ".hub/issues/vague-dashboard.md",
+          "message": "Issue scope is too vague for an independent subagent.",
+          "recommendation": "Replace placeholder scope text with concrete in-scope changes and boundaries."
+        },
+        {
+          "code": "issue_out_of_scope_too_vague",
+          "severity": "error",
+          "target": ".hub/issues/vague-dashboard.md",
+          "message": "Issue out-of-scope section is missing concrete exclusions.",
+          "recommendation": "List explicit non-goals so the subagent can avoid unrelated work."
+        },
+        {
+          "code": "issue_done_criteria_not_observable",
+          "severity": "error",
+          "target": ".hub/issues/vague-dashboard.md",
+          "message": "Done criteria are not observable.",
+          "recommendation": "Replace subjective criteria with checkable outcomes."
+        }
+      ]
+    }
+  ]
+}

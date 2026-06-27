@@ -21,7 +21,7 @@ Run:
 python3 <skill-dir>/scripts/agent_hub_claim.py claim \
   --backend file \
   --purpose work \
-  --page-id '<issue-id-or-file-path>' \
+  --page-id '<issue-id>' \
   --owner '<agent-name>' \
   --base-branch '<base>' \
   --branch '<branch>' \
@@ -69,7 +69,7 @@ Run:
 python3 <skill-dir>/scripts/agent_hub_claim.py claim \
   --backend file \
   --purpose review \
-  --page-id '<issue-id-or-file-path>' \
+  --page-id '<issue-id>' \
   --owner '<reviewer-name>'
 ```
 

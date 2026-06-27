@@ -22,6 +22,134 @@ CLAIMS_NAME = "claims.json"
 ISSUES_DIR = "issues"
 DECISIONS_DIR = "decisions"
 ARTIFACTS_DIR = "artifacts"
+PROJECT_DIR = "project"
+CHANGES_DIR = "changes"
+REPORTS_DIR = "reports"
+STATE_NAME = "state.yml"
+ISSUE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+CHANGE_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+PROJECT_TEMPLATES = {
+    "principles.md": """# Principles
+
+## Quality Bar
+
+## TDD And Regression Policy
+
+## Review Rules
+
+## Security And Safety
+
+## Non-Negotiables
+
+## Tradeoffs
+""",
+    "product.md": """# Product
+
+## Purpose
+
+## Users
+
+## Outcomes
+
+## Non-Goals
+
+## Success Signals
+""",
+    "tech.md": """# Tech
+
+## Stack
+
+## Package Manager
+
+## Test Commands
+
+## Environment Notes
+""",
+    "structure.md": """# Structure
+
+## Repo Map
+
+## Boundaries
+
+## Entry Points
+
+## Extension Points
+
+## Areas To Avoid
+""",
+    "standards-index.md": """# Standards Index
+
+## When To Read
+
+## Standards
+""",
+    "delegation.md": """# Delegation Rules
+
+The main agent is an orchestrator, not an executor.
+
+## Main Agent Responsibilities
+
+## Subagent Responsibilities
+
+## Handoff Contract
+
+## Evidence Requirements
+
+## Stop Conditions
+
+## Exceptions
+""",
+}
+
+CHANGE_TEMPLATES = {
+    "proposal.md": """# Proposal
+
+## Why
+
+## What Changes
+
+## Out Of Scope
+""",
+    "shape.md": """# Shape
+
+## User Intent
+
+## Constraints
+""",
+    "design.md": """# Design
+
+## Approach
+
+## Data Flow
+
+## Interfaces
+""",
+    "tasks.md": """# Tasks
+
+## Dependency Graph
+
+## Issues
+""",
+    "checklist.md": """# Checklist
+
+## Spec Quality
+
+## TDD Readiness
+""",
+    "evidence.md": """# Evidence
+
+## Test Runs
+
+## Notes
+""",
+    "review.md": """# Review
+
+## Review Status
+
+## Findings
+""",
+}
 
 
 def now_utc() -> datetime:
@@ -153,6 +281,60 @@ def dump_frontmatter(data: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def format_yamlish_scalar(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if value == "":
+            return '""'
+        if re.fullmatch(r"[A-Za-z0-9_./:-]+", value):
+            return value
+        return json.dumps(value)
+    return json.dumps(value, sort_keys=True)
+
+
+def dump_yamlish(data: dict[str, Any], indent: int = 0) -> str:
+    lines: list[str] = []
+    prefix = " " * indent
+    for key, value in data.items():
+        if isinstance(value, dict):
+            if not value:
+                lines.append(f"{prefix}{key}: {{}}")
+            else:
+                lines.append(f"{prefix}{key}:")
+                lines.append(dump_yamlish(value, indent + 2).rstrip())
+        elif isinstance(value, list):
+            if not value:
+                lines.append(f"{prefix}{key}: []")
+            else:
+                lines.append(f"{prefix}{key}:")
+                for item in value:
+                    if isinstance(item, dict):
+                        lines.append(f"{prefix}  -")
+                        lines.append(dump_yamlish(item, indent + 4).rstrip())
+                    else:
+                        lines.append(f"{prefix}  - {format_yamlish_scalar(item)}")
+        else:
+            lines.append(f"{prefix}{key}: {format_yamlish_scalar(value)}")
+    return "\n".join(lines) + "\n"
+
+
+def load_yamlish(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    text = path.read_text(encoding="utf-8")
+    data, _ = parse_frontmatter(f"---\n{text.rstrip()}\n---\n")
+    return data
+
+
+def write_yamlish(path: Path, data: dict[str, Any]) -> None:
+    atomic_write(path, dump_yamlish(data))
+
+
 def atomic_write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -171,6 +353,49 @@ def normalize_list(value: Any) -> list[str]:
     return [str(value)]
 
 
+def validate_issue_id(issue_id: str | None, field_name: str = "issue id") -> str:
+    value = str(issue_id or "")
+    if not value:
+        raise RuntimeError(f"Invalid {field_name}: value is required.")
+    if Path(value).is_absolute() or "/" in value or "\\" in value:
+        raise RuntimeError(
+            f"Invalid {field_name}: issue IDs must not be paths or contain separators."
+        )
+    if value in {".", ".."} or ".." in Path(value).parts:
+        raise RuntimeError(f"Invalid {field_name}: traversal segments are not allowed.")
+    if not ISSUE_ID_RE.fullmatch(value):
+        raise RuntimeError(
+            f"Invalid {field_name}: use lowercase letters, numbers, and hyphens."
+        )
+    return value
+
+
+def validate_change_slug(change_slug: str | None, field_name: str = "change slug") -> str:
+    value = str(change_slug or "")
+    if not value:
+        raise RuntimeError(f"Invalid {field_name}: value is required.")
+    if Path(value).is_absolute() or "/" in value or "\\" in value:
+        raise RuntimeError(
+            f"Invalid {field_name}: change slugs must not be paths or contain separators."
+        )
+    if value in {".", ".."} or ".." in Path(value).parts:
+        raise RuntimeError(f"Invalid {field_name}: traversal segments are not allowed.")
+    if not CHANGE_SLUG_RE.fullmatch(value):
+        raise RuntimeError(
+            f"Invalid {field_name}: use lowercase letters, numbers, and hyphens."
+        )
+    return value
+
+
+def issue_path_for_id(hub_path: Path, issue_id: str) -> Path:
+    safe_id = validate_issue_id(issue_id)
+    issues_dir = (hub_path / ISSUES_DIR).resolve()
+    path = (issues_dir / f"{safe_id}.md").resolve()
+    if path.parent != issues_dir:
+        raise RuntimeError("Issue file paths must stay directly inside .hub/issues.")
+    return path
+
+
 @dataclass
 class FileHubIssue:
     id: str
@@ -185,6 +410,7 @@ class FileHubIssue:
     summary: str = ""
     blockers: str = ""
     dependency_notes: str = ""
+    change: str = ""
     depends_on: list[str] = field(default_factory=list)
     blocks: list[str] = field(default_factory=list)
     claim: dict[str, Any] = field(default_factory=dict)
@@ -196,12 +422,36 @@ class FileHubIssue:
     related_links: str = ""
     notion_url: str = ""
     updated_at: datetime | None = None
+    extra_frontmatter: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_path(cls, path: Path) -> "FileHubIssue":
         data, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         stat = path.stat()
         issue_id = str(data.get("id") or path.stem)
+        known_keys = {
+            "id",
+            "title",
+            "status",
+            "type",
+            "priority",
+            "owner",
+            "area",
+            "summary",
+            "blockers",
+            "dependency_notes",
+            "change",
+            "depends_on",
+            "blocks",
+            "claim",
+            "base_branch",
+            "branch",
+            "worktree_path",
+            "commit_sha",
+            "pr_url",
+            "related_links",
+            "notion_url",
+        }
         return cls(
             id=issue_id,
             path=path,
@@ -215,6 +465,7 @@ class FileHubIssue:
             summary=str(data.get("summary") or ""),
             blockers=str(data.get("blockers") or ""),
             dependency_notes=str(data.get("dependency_notes") or ""),
+            change=str(data.get("change") or ""),
             depends_on=normalize_list(data.get("depends_on")),
             blocks=normalize_list(data.get("blocks")),
             claim=data.get("claim") if isinstance(data.get("claim"), dict) else {},
@@ -226,6 +477,9 @@ class FileHubIssue:
             related_links=str(data.get("related_links") or ""),
             notion_url=str(data.get("notion_url") or ""),
             updated_at=datetime.fromtimestamp(stat.st_mtime, timezone.utc),
+            extra_frontmatter={
+                key: value for key, value in data.items() if key not in known_keys
+            },
         )
 
     @property
@@ -252,6 +506,7 @@ class FileHubIssue:
             "summary": self.summary,
             "blockers": self.blockers,
             "dependency_notes": self.dependency_notes,
+            "change": self.change,
             "depends_on": self.depends_on,
             "blocks": self.blocks,
             "claim": self.claim,
@@ -265,7 +520,16 @@ class FileHubIssue:
         }
 
     def write(self) -> None:
-        atomic_write(self.path, dump_frontmatter(self.to_frontmatter()) + self.body.lstrip("\n"))
+        frontmatter = self.to_frontmatter()
+        if self.path.exists():
+            existing, _ = parse_frontmatter(self.path.read_text(encoding="utf-8"))
+            for key, value in existing.items():
+                if key not in frontmatter:
+                    frontmatter[key] = value
+        for key, value in self.extra_frontmatter.items():
+            if key not in frontmatter:
+                frontmatter[key] = value
+        atomic_write(self.path, dump_frontmatter(frontmatter) + self.body.lstrip("\n"))
 
     def append_activity(self, heading: str, lines: list[str]) -> None:
         body = self.body.rstrip() + "\n\n"
@@ -291,17 +555,18 @@ def load_issues(hub_path: Path) -> list[FileHubIssue]:
 
 
 def issue_by_id(hub_path: Path, issue_id_or_path: str) -> FileHubIssue:
-    candidate = Path(issue_id_or_path).expanduser()
-    if candidate.exists():
-        return FileHubIssue.from_path(candidate)
+    issue_id = validate_issue_id(issue_id_or_path)
+    path = issue_path_for_id(hub_path, issue_id)
+    if path.exists():
+        return FileHubIssue.from_path(path)
     issues = load_issues(hub_path)
     by_id = {issue.id: issue for issue in issues}
-    if issue_id_or_path in by_id:
-        return by_id[issue_id_or_path]
+    if issue_id in by_id:
+        return by_id[issue_id]
     for issue in issues:
-        if issue.path.stem == issue_id_or_path:
+        if issue.path.stem == issue_id:
             return issue
-    raise RuntimeError(f"No .hub issue found for {issue_id_or_path!r}.")
+    raise RuntimeError(f"No .hub issue found for {issue_id!r}.")
 
 
 def active_claim(issue: FileHubIssue, runtime_claim: dict[str, Any] | None = None) -> bool:
@@ -368,7 +633,13 @@ def load_runtime_claims(hub_path: Path) -> dict[str, Any]:
     path = runtime_claims_path(hub_path)
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8") or "{}")
+    try:
+        claims = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Malformed runtime claims file {path}: {exc}") from exc
+    if not isinstance(claims, dict):
+        raise RuntimeError(f"Malformed runtime claims file {path}: expected a JSON object.")
+    return claims
 
 
 def write_runtime_claims(hub_path: Path, claims: dict[str, Any]) -> None:
@@ -407,8 +678,11 @@ def has_waiver(issue: FileHubIssue) -> bool:
 def create_hub(root: Path, project_name: str | None = None) -> Path:
     root = root.expanduser().resolve()
     hub = root / HUB_DIR_NAME
+    (hub / PROJECT_DIR).mkdir(parents=True, exist_ok=True)
+    (hub / CHANGES_DIR).mkdir(parents=True, exist_ok=True)
     (hub / ISSUES_DIR).mkdir(parents=True, exist_ok=True)
     (hub / DECISIONS_DIR).mkdir(parents=True, exist_ok=True)
+    (hub / REPORTS_DIR).mkdir(parents=True, exist_ok=True)
     (hub / ARTIFACTS_DIR).mkdir(parents=True, exist_ok=True)
     (hub / RUNTIME_DIR).mkdir(parents=True, exist_ok=True)
     if not (hub / ".gitignore").exists():
@@ -416,7 +690,8 @@ def create_hub(root: Path, project_name: str | None = None) -> Path:
     if not (hub / CONFIG_NAME).exists():
         name = project_name or root.name
         config = {
-            "version": "2",
+            "version": 3,
+            "source_of_truth": "file",
             "project": name,
             "canonical_store": "file",
             "notion_mirror": {
@@ -424,8 +699,33 @@ def create_hub(root: Path, project_name: str | None = None) -> Path:
                 "data_source_id": "",
                 "page_url": "",
             },
+            "cli": {
+                "strict_writes": True,
+                "preserve_unknown_frontmatter": True,
+            },
+            "agents": {
+                "enabled": False,
+                "require_subagent_for_tasks": True,
+            },
+            "audit": {
+                "tdd_required_for_implementation": True,
+                "stale_claim_minutes": 120,
+            },
+            "dashboard": {
+                "enabled": False,
+                "mode": "read-only",
+            },
         }
-        atomic_write(hub / CONFIG_NAME, dump_frontmatter(config).strip("-\n") + "\n")
+        write_yamlish(hub / CONFIG_NAME, config)
+    if not (hub / STATE_NAME).exists():
+        write_yamlish(
+            hub / STATE_NAME,
+            {"version": 3, "updated_at": isoformat(now_utc()), "issues": {}, "changes": {}},
+        )
+    for filename, text in PROJECT_TEMPLATES.items():
+        path = hub / PROJECT_DIR / filename
+        if not path.exists():
+            atomic_write(path, text.rstrip() + "\n")
     return hub
 
 
@@ -435,9 +735,14 @@ def create_issue_file(
     issue_id: str | None = None,
     issue_type: str = "Feature",
     priority: str = "P2",
+    change: str = "",
 ) -> FileHubIssue:
-    issue_id = issue_id or slugify(title)
-    path = hub_path / ISSUES_DIR / f"{issue_id}.md"
+    issue_id = validate_issue_id(issue_id or slugify(title))
+    if change:
+        change = validate_change_slug(change)
+        if not change_yml_path(hub_path, change).exists():
+            raise RuntimeError(f"No change packet found for {change!r}.")
+    path = issue_path_for_id(hub_path, issue_id)
     if path.exists():
         raise RuntimeError(f"Issue already exists: {path}")
     issue = FileHubIssue(
@@ -446,15 +751,40 @@ def create_issue_file(
         title=title,
         type=issue_type,
         priority=priority,
+        change=change,
         body="""## Context
 
 ## Scope
 
+## Out Of Scope
+
 ## Done Criteria
+
 - [ ]
 
-## Verification Steps
-1.
+## Verification Strategy
+
+### Regression Target
+
+### Test Plan
+
+- [ ] Unit:
+- [ ] Integration:
+- [ ] E2E / Playwright:
+- [ ] Manual / inspection:
+
+### First Test
+
+Path:
+Expected initial result:
+Reason this proves the regression or requirement:
+
+### Final Verification
+
+Commands:
+Expected result:
+
+### Untestable Surface
 
 ## Assumptions
 
@@ -680,3 +1010,697 @@ def release_issue(
         "claim_id": refetched.claim_id,
         "backend": "file",
     }
+
+
+def change_dir(hub_path: Path, change_slug: str) -> Path:
+    return hub_path / CHANGES_DIR / validate_change_slug(change_slug)
+
+
+def change_yml_path(hub_path: Path, change_slug: str) -> Path:
+    return change_dir(hub_path, change_slug) / "change.yml"
+
+
+def load_change(hub_path: Path, change_slug: str) -> dict[str, Any]:
+    path = change_yml_path(hub_path, change_slug)
+    if not path.exists():
+        raise RuntimeError(f"No change packet found for {change_slug!r}.")
+    return load_yamlish(path)
+
+
+def write_change(hub_path: Path, change_slug: str, data: dict[str, Any]) -> None:
+    write_yamlish(change_yml_path(hub_path, change_slug), data)
+
+
+def create_change_packet(
+    hub_path: Path,
+    slug: str,
+    title: str,
+    priority: str = "P2",
+    owner: str = "Unassigned",
+    status: str = "Draft",
+) -> Path:
+    slug = validate_change_slug(slugify(slug))
+    target_dir = change_dir(hub_path, slug)
+    if target_dir.exists() and (target_dir / "change.yml").exists():
+        raise RuntimeError(f"Change packet already exists: {target_dir}")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = isoformat(now_utc())
+    write_yamlish(
+        target_dir / "change.yml",
+        {
+            "id": slug,
+            "title": title,
+            "status": status,
+            "priority": priority,
+            "owner": owner,
+            "issues": [],
+            "depends_on": [],
+            "blocks": [],
+            "created_at": timestamp,
+            "updated_at": timestamp,
+        },
+    )
+    for filename, text in CHANGE_TEMPLATES.items():
+        path = target_dir / filename
+        if not path.exists():
+            atomic_write(path, text.rstrip() + "\n")
+    return target_dir
+
+
+def unique_append(values: list[str], value: str) -> list[str]:
+    return values if value in values else [*values, value]
+
+
+def remove_value(values: list[str], value: str) -> list[str]:
+    return [item for item in values if item != value]
+
+
+def link_issue_to_change(hub_path: Path, change_slug: str, issue_id: str) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    change = load_change(hub_path, change_slug)
+    issues = normalize_list(change.get("issues"))
+    change["issues"] = unique_append(issues, issue.id)
+    change["updated_at"] = isoformat(now_utc())
+    write_change(hub_path, change_slug, change)
+
+    issue.change = change_slug
+    issue.write()
+
+    tasks_path = change_dir(hub_path, change_slug) / "tasks.md"
+    tasks_text = tasks_path.read_text(encoding="utf-8") if tasks_path.exists() else CHANGE_TEMPLATES["tasks.md"]
+    if issue.id not in extract_task_issue_ids(tasks_text):
+        tasks_text = tasks_text.rstrip() + f"\n\n- [ ] {issue.id} - {issue.title}\n"
+        atomic_write(tasks_path, tasks_text)
+    return {"ok": True, "change": change_slug, "issue": issue.id}
+
+
+def add_issue_dependency(hub_path: Path, issue_id: str, depends_on: str) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    provider = issue_by_id(hub_path, depends_on)
+    issue.depends_on = unique_append(issue.depends_on, provider.id)
+    provider.blocks = unique_append(provider.blocks, issue.id)
+    issue.write()
+    provider.write()
+    return {"ok": True, "issue": issue.id, "depends_on": provider.id}
+
+
+def remove_issue_dependency(hub_path: Path, issue_id: str, depends_on: str) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    provider = issue_by_id(hub_path, depends_on)
+    issue.depends_on = remove_value(issue.depends_on, provider.id)
+    provider.blocks = remove_value(provider.blocks, issue.id)
+    issue.write()
+    provider.write()
+    return {"ok": True, "issue": issue.id, "removed": provider.id}
+
+
+def set_issue_status(
+    hub_path: Path, issue_id: str, status: str, reason: str = "", agent: str = "Codex"
+) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    if status not in STATUS_ORDER:
+        raise RuntimeError(f"Unsupported status: {status}")
+    if issue.status not in STATUS_ORDER:
+        raise RuntimeError(f"Unsupported current status: {issue.status}")
+    current_index = STATUS_ORDER.index(issue.status)
+    target_index = STATUS_ORDER.index(status)
+    if target_index not in {current_index, current_index + 1}:
+        raise RuntimeError(
+            f"Refusing status transition {issue.status!r} -> {status!r}; use the next workflow state."
+        )
+    previous = issue.status
+    issue.status = status
+    issue.append_activity(
+        f"Status changed to {status}",
+        [
+            f"Date: {isoformat(now_utc())}",
+            f"Agent: {agent}",
+            f"Previous status: {previous}",
+            f"Reason: {reason or '-'}",
+        ],
+    )
+    return {"ok": True, "issue": issue.id, "status": status, "previous_status": previous}
+
+
+def append_issue_activity(
+    hub_path: Path, issue_id: str, heading: str, lines: list[str]
+) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    issue.append_activity(heading, lines)
+    return {"ok": True, "issue": issue.id, "heading": heading}
+
+
+def add_issue_evidence(
+    hub_path: Path, issue_id: str, heading: str, lines: list[str]
+) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    artifact_dir = hub_path / ARTIFACTS_DIR / issue.id
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    index_path = artifact_dir / "evidence.md"
+    entry = f"### {heading}\n" + "\n".join(lines).rstrip() + "\n"
+    existing = index_path.read_text(encoding="utf-8") if index_path.exists() else "# Evidence\n"
+    atomic_write(index_path, existing.rstrip() + "\n\n" + entry)
+    issue.append_activity(heading, lines)
+    return {"ok": True, "issue": issue.id, "heading": heading}
+
+
+def list_changes(hub_path: Path) -> list[dict[str, Any]]:
+    changes_root = hub_path / CHANGES_DIR
+    if not changes_root.exists():
+        return []
+    changes: list[dict[str, Any]] = []
+    for path in sorted(changes_root.glob("*/change.yml")):
+        data = load_yamlish(path)
+        data.setdefault("id", path.parent.name)
+        data["_path"] = path
+        changes.append(data)
+    return changes
+
+
+def refresh_state(hub_path: Path) -> dict[str, Any]:
+    issues = load_issues(hub_path)
+    changes = list_changes(hub_path)
+    state = {
+        "version": 3,
+        "updated_at": isoformat(now_utc()),
+        "issues": {
+            issue.id: {
+                "title": issue.title,
+                "status": issue.status,
+                "priority": issue.priority,
+                "owner": issue.owner,
+                "change": issue.change,
+                "depends_on": issue.depends_on,
+                "blocks": issue.blocks,
+            }
+            for issue in sorted(issues, key=lambda item: item.id)
+        },
+        "changes": {
+            str(change.get("id")): {
+                "title": str(change.get("title") or ""),
+                "status": str(change.get("status") or ""),
+                "priority": str(change.get("priority") or ""),
+                "owner": str(change.get("owner") or ""),
+                "issues": normalize_list(change.get("issues")),
+            }
+            for change in sorted(changes, key=lambda item: str(item.get("id") or ""))
+        },
+    }
+    write_yamlish(hub_path / STATE_NAME, state)
+    return state
+
+
+def relative_hub_target(hub_path: Path, path: Path) -> str:
+    try:
+        return ".hub/" + path.relative_to(hub_path).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def diagnostic(
+    code: str, severity: str, target: str, message: str, recommendation: str
+) -> dict[str, str]:
+    return {
+        "code": code,
+        "severity": severity,
+        "target": target,
+        "message": message,
+        "recommendation": recommendation,
+    }
+
+
+def frontmatter_malformed(path: Path) -> bool:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        return True
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        return True
+    raw = text[4:end].splitlines()
+    for line in raw:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.count('"') % 2 == 1 or stripped.count("'") % 2 == 1:
+            return True
+        if ("[" in stripped and "]" not in stripped) or ("]" in stripped and "[" not in stripped):
+            return True
+    return False
+
+
+def malformed_frontmatter_diagnostic(hub_path: Path, path: Path) -> dict[str, str]:
+    return diagnostic(
+        "malformed_frontmatter",
+        "error",
+        relative_hub_target(hub_path, path),
+        "Issue frontmatter is malformed.",
+        "Repair the YAML frontmatter with the deterministic issue update command or recreate the issue file.",
+    )
+
+
+def load_valid_issue_paths(hub_path: Path) -> list[Path]:
+    issues_dir = hub_path / ISSUES_DIR
+    if not issues_dir.exists():
+        return []
+    return [
+        path
+        for path in sorted(issues_dir.glob("*.md"))
+        if not frontmatter_malformed(path)
+    ]
+
+
+def runtime_claim_audit_diagnostics(
+    hub_path: Path, by_id: dict[str, FileHubIssue]
+) -> list[dict[str, str]]:
+    path = runtime_claims_path(hub_path)
+    if not path.exists():
+        return []
+
+    target = relative_hub_target(hub_path, path)
+    try:
+        claims = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except json.JSONDecodeError:
+        return [
+            diagnostic(
+                "malformed_runtime_claims",
+                "error",
+                target,
+                "Runtime claims file is malformed JSON.",
+                "Repair or remove .hub/runtime/claims.json before claiming or auditing work.",
+            )
+        ]
+
+    if not isinstance(claims, dict):
+        return [
+            diagnostic(
+                "malformed_runtime_claims",
+                "error",
+                target,
+                "Runtime claims file must contain a JSON object.",
+                "Rewrite .hub/runtime/claims.json as an object keyed by issue ID.",
+            )
+        ]
+
+    diagnostics: list[dict[str, str]] = []
+    for issue_id, claim in sorted(claims.items()):
+        if not isinstance(claim, dict):
+            diagnostics.append(
+                diagnostic(
+                    "malformed_runtime_claim",
+                    "error",
+                    f"{target}#{issue_id}",
+                    "Runtime claim entry is not an object.",
+                    "Remove the malformed entry or recreate the claim with the deterministic claim command.",
+                )
+            )
+            continue
+
+        issue = by_id.get(str(issue_id))
+        if issue is None:
+            diagnostics.append(
+                diagnostic(
+                    "runtime_claim_unknown_issue",
+                    "warning",
+                    f"{target}#{issue_id}",
+                    "Runtime claim references an unknown issue.",
+                    "Remove stale runtime claim entries for issues that no longer exist.",
+                )
+            )
+            continue
+
+        expires_at = parse_datetime(claim.get("expires_at"))
+        if claim.get("id") and expires_at and expires_at <= now_utc():
+            diagnostics.append(
+                diagnostic(
+                    "stale_claim",
+                    "error",
+                    relative_hub_target(hub_path, issue.path),
+                    "Issue has an expired work claim.",
+                    "Use the deterministic claim release or renew command before another agent claims this issue.",
+                )
+            )
+    return diagnostics
+
+
+def section_text(body: str, heading: str) -> str:
+    pattern = re.compile(
+        rf"^{re.escape(heading)}\s*$([\s\S]*?)(?=^##+ .*$|\Z)",
+        re.MULTILINE,
+    )
+    match = pattern.search(body)
+    return match.group(1).strip() if match else ""
+
+
+def field_value(section: str, field: str) -> str:
+    match = re.search(rf"^{re.escape(field)}:\s*(.*)$", section, re.MULTILINE)
+    return match.group(1).strip().strip("`") if match else ""
+
+
+def has_first_test(body: str) -> bool:
+    first_test = section_text(body, "### First Test")
+    return bool(
+        field_value(first_test, "Path")
+        and field_value(first_test, "Expected initial result")
+        and field_value(first_test, "Reason this proves the regression or requirement")
+    )
+
+
+def has_final_verification(body: str) -> bool:
+    final = section_text(body, "### Final Verification")
+    return bool(field_value(final, "Commands") and field_value(final, "Expected result"))
+
+
+def is_placeholder_text(text: str) -> bool:
+    normalized = " ".join(text.strip().lower().split())
+    return normalized in {"", "tbd", "tbd.", "todo", "todo.", "none", "n/a"}
+
+
+def issue_audit_diagnostics(hub_path: Path, issue: FileHubIssue) -> list[dict[str, str]]:
+    target = relative_hub_target(hub_path, issue.path)
+    diagnostics: list[dict[str, str]] = []
+
+    if issue.type in {"Feature", "Bug", "Task"} and not has_first_test(issue.body):
+        diagnostics.append(
+            diagnostic(
+                "implementation_missing_first_test",
+                "error",
+                target,
+                "Implementation issue has no First Test recorded.",
+                "Add a regression test path and expected initial failing result before claim.",
+            )
+        )
+    if issue.type in {"Feature", "Bug", "Task"} and not has_final_verification(issue.body):
+        diagnostics.append(
+            diagnostic(
+                "implementation_missing_final_verification",
+                "error",
+                target,
+                "Implementation issue has no final verification command recorded.",
+                "Add the focused command that must pass after implementation.",
+            )
+        )
+
+    if issue.status == "In Review":
+        if not issue.commit_sha:
+            diagnostics.append(
+                diagnostic(
+                    "review_ready_missing_commit",
+                    "error",
+                    target,
+                    "Issue is In Review without commit evidence.",
+                    "Record the commit SHA before submitting repo-changing work for review.",
+                )
+            )
+        if not issue.pr_url:
+            diagnostics.append(
+                diagnostic(
+                    "review_ready_missing_pr",
+                    "error",
+                    target,
+                    "Issue is In Review without PR evidence.",
+                    "Record the pull request URL before review can complete.",
+                )
+            )
+        if "Command:" not in issue.body and "Result:" not in issue.body:
+            diagnostics.append(
+                diagnostic(
+                    "review_ready_missing_regression_evidence",
+                    "error",
+                    target,
+                    "Issue is In Review without regression or final verification evidence.",
+                    "Add focused command output and final verification results before review.",
+                )
+            )
+
+    claim_expires_at = parse_datetime(issue.claim.get("expires_at"))
+    if issue.claim and claim_expires_at and claim_expires_at <= now_utc():
+        diagnostics.append(
+            diagnostic(
+                "stale_claim",
+                "error",
+                target,
+                "Issue has an expired work claim.",
+                "Use the deterministic claim release or renew command before another agent claims this issue.",
+            )
+        )
+
+    scope = section_text(issue.body, "## Scope")
+    if is_placeholder_text(scope):
+        diagnostics.append(
+            diagnostic(
+                "issue_scope_too_vague",
+                "error",
+                target,
+                "Issue scope is too vague for an independent subagent.",
+                "Replace placeholder scope text with concrete in-scope changes and boundaries.",
+            )
+        )
+    out_of_scope = section_text(issue.body, "## Out Of Scope")
+    if is_placeholder_text(out_of_scope):
+        diagnostics.append(
+            diagnostic(
+                "issue_out_of_scope_too_vague",
+                "error",
+                target,
+                "Issue out-of-scope section is missing concrete exclusions.",
+                "List explicit non-goals so the subagent can avoid unrelated work.",
+            )
+        )
+    done = section_text(issue.body, "## Done Criteria")
+    if is_placeholder_text(done) or re.search(r"- \[[ xX]\]\s*better\.?\s*$", done, re.I | re.M):
+        diagnostics.append(
+            diagnostic(
+                "issue_done_criteria_not_observable",
+                "error",
+                target,
+                "Done criteria are not observable.",
+                "Replace subjective criteria with checkable outcomes.",
+            )
+        )
+
+    return diagnostics
+
+
+def extract_task_issue_ids(tasks_text: str) -> list[str]:
+    ids: list[str] = []
+    for line in tasks_text.splitlines():
+        match = re.match(r"\s*-\s*\[[ xX]\]\s*`?([a-z0-9][a-z0-9-]*)`?\b", line)
+        if match:
+            ids.append(match.group(1))
+    return ids
+
+
+def write_report(hub_path: Path, name: str, result: dict[str, Any]) -> None:
+    reports_dir = hub_path / REPORTS_DIR
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    json_path = reports_dir / f"latest-{name}.json"
+    md_path = reports_dir / f"latest-{name}.md"
+    atomic_write(json_path, json.dumps(result, indent=2, sort_keys=True) + "\n")
+
+    lines = [f"# Agent Hub {name.title()} Report", ""]
+    diagnostics = result.get("diagnostics", [])
+    if not diagnostics:
+        lines.append("No diagnostics.")
+    else:
+        for item in diagnostics:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                f"- {item.get('severity', 'info').upper()} `{item.get('code', '')}` "
+                f"{item.get('target', '')}: {item.get('message', '')}"
+            )
+            lines.append(f"  Recommendation: {item.get('recommendation', '')}")
+    atomic_write(md_path, "\n".join(lines).rstrip() + "\n")
+
+
+def audit_hub(hub_path: Path) -> dict[str, Any]:
+    diagnostics: list[dict[str, str]] = []
+
+    for filename in sorted(PROJECT_TEMPLATES):
+        path = hub_path / PROJECT_DIR / filename
+        target = relative_hub_target(hub_path, path)
+        if path.exists():
+            continue
+        diagnostics.append(
+            diagnostic(
+                "missing_required_file",
+                "error",
+                target,
+                "Required Agent Hub v3 file is missing.",
+                f"Create {target} with the Agent Hub v3 required headings.",
+            )
+        )
+        if filename == "principles.md":
+            diagnostics.append(
+                diagnostic(
+                    "missing_required_project_guidance",
+                    "error",
+                    target,
+                    "Required project guidance file is missing.",
+                    "Create .hub/project/principles.md with the Agent Hub v3 required headings.",
+                )
+            )
+        elif filename == "delegation.md":
+            diagnostics.append(
+                diagnostic(
+                    "missing_required_project_guidance",
+                    "error",
+                    target,
+                    "Required delegation guidance file is missing.",
+                    "Create .hub/project/delegation.md with the subagent handoff contract, evidence requirements, and stop conditions.",
+                )
+            )
+
+    issues_dir = hub_path / ISSUES_DIR
+    issue_paths = sorted(issues_dir.glob("*.md")) if issues_dir.exists() else []
+    valid_issues: list[FileHubIssue] = []
+    for path in issue_paths:
+        if frontmatter_malformed(path):
+            diagnostics.append(malformed_frontmatter_diagnostic(hub_path, path))
+            continue
+        issue = FileHubIssue.from_path(path)
+        valid_issues.append(issue)
+
+    by_id = {issue.id: issue for issue in valid_issues}
+    diagnostics.extend(runtime_claim_audit_diagnostics(hub_path, by_id))
+    for issue in valid_issues:
+        target = relative_hub_target(hub_path, issue.path)
+        for dep_id in issue.depends_on:
+            if dep_id not in by_id:
+                diagnostics.append(
+                    diagnostic(
+                        "dangling_dependency",
+                        "error",
+                        target,
+                        f"Issue depends on missing issue {dep_id}.",
+                        f"Create .hub/issues/{dep_id}.md or remove the dependency with the deterministic command.",
+                    )
+                )
+        diagnostics.extend(issue_audit_diagnostics(hub_path, issue))
+
+    result = {
+        "version": "3",
+        "diagnostics": diagnostics,
+        "summary": {"diagnostic_count": len(diagnostics), "issue_count": len(valid_issues)},
+    }
+    write_report(hub_path, "audit", result)
+    return result
+
+
+def audit_issue(hub_path: Path, issue_id: str) -> dict[str, Any]:
+    issue_path = issue_path_for_id(hub_path, issue_id)
+    if issue_path.exists() and frontmatter_malformed(issue_path):
+        result = {
+            "version": "3",
+            "issue": validate_issue_id(issue_id),
+            "diagnostics": [malformed_frontmatter_diagnostic(hub_path, issue_path)],
+            "summary": {"diagnostic_count": 1},
+        }
+        write_report(hub_path, "audit", result)
+        return result
+
+    issue = issue_by_id(hub_path, issue_id)
+    diagnostics = issue_audit_diagnostics(hub_path, issue)
+    by_id = {
+        item.id: item
+        for item in (FileHubIssue.from_path(path) for path in load_valid_issue_paths(hub_path))
+    }
+    target = relative_hub_target(hub_path, issue.path)
+    for dep_id in issue.depends_on:
+        if dep_id not in by_id:
+            diagnostics.insert(
+                0,
+                diagnostic(
+                    "dangling_dependency",
+                    "error",
+                    target,
+                    f"Issue depends on missing issue {dep_id}.",
+                    f"Create .hub/issues/{dep_id}.md or remove the dependency with the deterministic command.",
+                ),
+            )
+    result = {
+        "version": "3",
+        "issue": issue.id,
+        "diagnostics": diagnostics,
+        "summary": {"diagnostic_count": len(diagnostics)},
+    }
+    write_report(hub_path, "audit", result)
+    return result
+
+
+def analyze_change(hub_path: Path, change_slug: str) -> dict[str, Any]:
+    change = load_change(hub_path, change_slug)
+    listed_issues = normalize_list(change.get("issues"))
+    issue_paths = {
+        path.stem: path for path in sorted((hub_path / ISSUES_DIR).glob("*.md"))
+    }
+    valid_issues: dict[str, FileHubIssue] = {}
+    for issue_id, path in issue_paths.items():
+        if not frontmatter_malformed(path):
+            issue = FileHubIssue.from_path(path)
+            valid_issues[issue.id] = issue
+
+    diagnostics: list[dict[str, str]] = []
+    change_target = relative_hub_target(hub_path, change_yml_path(hub_path, change_slug))
+    for issue_id in listed_issues:
+        issue = valid_issues.get(issue_id)
+        if not issue:
+            diagnostics.append(
+                diagnostic(
+                    "change_missing_issue",
+                    "error",
+                    change_target,
+                    "Change packet references an issue file that does not exist.",
+                    f"Create .hub/issues/{issue_id}.md or remove {issue_id} from the change packet.",
+                )
+            )
+            continue
+        if issue.change != change_slug:
+            diagnostics.append(
+                diagnostic(
+                    "issue_change_mismatch",
+                    "error",
+                    relative_hub_target(hub_path, issue.path),
+                    "Issue frontmatter points to a different change packet.",
+                    f"Set issue field change to {change_slug} or move the issue to the referenced packet.",
+                )
+            )
+
+    for issue in sorted(valid_issues.values(), key=lambda item: item.id):
+        if issue.change == change_slug and issue.id not in listed_issues:
+            diagnostics.append(
+                diagnostic(
+                    "change_issue_link_mismatch",
+                    "error",
+                    relative_hub_target(hub_path, issue.path),
+                    "Issue frontmatter points to this change but change.yml does not list it.",
+                    f"Add {issue.id} to .hub/changes/{change_slug}/change.yml issues or clear the issue change field.",
+                )
+            )
+
+    tasks_path = change_dir(hub_path, change_slug) / "tasks.md"
+    if tasks_path.exists():
+        task_ids = extract_task_issue_ids(tasks_path.read_text(encoding="utf-8"))
+        for task_id in task_ids:
+            if task_id not in listed_issues:
+                diagnostics.append(
+                    diagnostic(
+                        "change_task_not_linked",
+                        "warning",
+                        relative_hub_target(hub_path, tasks_path),
+                        "Task list mentions an issue not linked from change.yml.",
+                        f"Add {task_id} to change.yml issues or remove it from tasks.md.",
+                    )
+                )
+
+    result = {
+        "version": "3",
+        "change": change_slug,
+        "diagnostics": diagnostics,
+        "summary": {
+            "diagnostic_count": len(diagnostics),
+            "listed_issue_count": len(listed_issues),
+        },
+    }
+    write_report(hub_path, "analysis", result)
+    return result

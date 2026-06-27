@@ -1,0 +1,9 @@
+version: 3
+updated_at: "2026-06-26T00:00:00Z"
+issues:
+  ready-implementation:
+    status: Not Started
+    change: eval-contract
+changes:
+  eval-contract:
+    status: Draft

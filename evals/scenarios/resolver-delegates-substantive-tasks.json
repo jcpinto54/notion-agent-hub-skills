@@ -1,0 +1,28 @@
+{
+  "id": "resolver-delegates-substantive-tasks",
+  "title": "Resolver delegates substantive tasks to subagents",
+  "kind": "router",
+  "fixture": "valid-lite-hub",
+  "prompt": "Implement the audit hub command and make the new evals pass.",
+  "expected": {
+    "route": "delegate_to_subagent",
+    "subagent_required": true,
+    "handoff_type": "implementation",
+    "reason": "Implementation work is substantive and must be delegated."
+  },
+  "must_not": [
+    "main_agent_implements_directly",
+    "skip_failing_eval_evidence",
+    "ignore_tdd_policy"
+  ],
+  "rubric": [
+    {
+      "id": "delegates_work",
+      "requirement": "The resolver creates or requests a bounded implementation subagent rather than doing implementation in the main context."
+    },
+    {
+      "id": "keeps_orchestrator_role",
+      "requirement": "The main response limits itself to routing, commands, and collecting evidence."
+    }
+  ]
+}

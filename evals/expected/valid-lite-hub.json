@@ -1,0 +1,13 @@
+{
+  "id": "valid-lite-hub",
+  "fixture": "valid-lite-hub",
+  "evaluations": [
+    {
+      "id": "audit-hub",
+      "command": ["audit", "hub"],
+      "result_file": ".hub/reports/latest-audit.json",
+      "match": "exact_diagnostics",
+      "expected_diagnostics": []
+    }
+  ]
+}

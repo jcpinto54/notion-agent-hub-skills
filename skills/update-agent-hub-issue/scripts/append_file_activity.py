@@ -16,7 +16,7 @@ from file_hub_common import issue_by_id, isoformat, now_utc, resolve_hub_path  #
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hub-root", type=Path)
-    parser.add_argument("--issue", required=True, help="Issue ID or issue file path.")
+    parser.add_argument("--issue", required=True, help="Issue ID.")
     parser.add_argument("--heading", default="Progress")
     parser.add_argument("--agent", default="Codex")
     parser.add_argument("--summary", required=True)

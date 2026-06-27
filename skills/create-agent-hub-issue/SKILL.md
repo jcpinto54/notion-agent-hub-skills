@@ -5,22 +5,31 @@ description: Create repo-native `.hub` Agent Hub issues or legacy Notion issues,
 
 # Create Agent Hub Issue
 
-For repo work, create `.hub/issues/<issue-id>.md` as the canonical durable record. Use Notion MCP only for legacy hubs or optional mirror pages.
+For repo work, `.hub/issues/<issue-id>.md` is the canonical durable record. Use deterministic commands for repo-native writes. Use Notion MCP only for legacy hubs or optional mirror pages.
 
 ## Workflow
 
-1. If `.hub/config.yml` exists, write a repo-native issue. Otherwise use the configured legacy Notion `Issues / Activities` data source.
-2. Write a durable body with the reason the issue exists, scope, acceptance criteria or expected output, dependencies, and first next step.
-3. Set obvious dependencies before saving when ordering is clear.
+1. If `.hub/config.yml` exists, use the v3 CLI or a compatibility script. Otherwise use the configured legacy Notion `Issues / Activities` data source.
+2. Draft durable content with context, scope, out of scope, observable done criteria, verification strategy, dependencies, and first next step.
+3. Set obvious dependencies through deterministic dependency commands when ordering is clear.
 4. Create the item and fetch/read it back to verify metadata and body.
+5. Do not hand-edit `.hub` frontmatter, dependency links, status, claim state, or layout. If no deterministic command exists for the needed mutation, report the missing backend surface.
 
 For repo-native creation, use:
 
 ```bash
-python3 <skill-dir>/scripts/create_file_issue.py '<title>' --id '<issue-id>' --type Feature --priority P2
+python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py issue create \
+  --title '<title>' \
+  --id '<issue-id>' \
+  --type Feature \
+  --priority P2
 ```
 
-Then edit the generated issue body as needed.
+When the unified v3 CLI is unavailable, use the compatibility script only for the creation behavior it supports:
+
+```bash
+python3 <skill-dir>/scripts/create_file_issue.py '<title>' --id '<issue-id>' --type Feature --priority P2
+```
 
 ## Defaults
 
@@ -39,8 +48,35 @@ Then edit the generated issue body as needed.
 
 ## Scope
 
-## Acceptance Criteria
+## Out Of Scope
+
+## Done Criteria
+
 - [ ]
+
+## Verification Strategy
+
+### Regression Target
+
+### Test Plan
+
+- [ ] Unit:
+- [ ] Integration:
+- [ ] E2E / Playwright:
+- [ ] Manual / inspection:
+
+### First Test
+
+Path:
+Expected initial result:
+Reason this proves the regression or requirement:
+
+### Final Verification
+
+Commands:
+Expected result:
+
+### Untestable Surface
 
 ## Dependencies
 

@@ -1,0 +1,6 @@
+version: 3
+updated_at: "2026-06-26T00:00:00Z"
+issues:
+  stale-worker:
+    status: In Progress
+changes: {}

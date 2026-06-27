@@ -1,0 +1,30 @@
+{
+  "id": "resolver-routes-mutations",
+  "title": "Resolver routes mutations to deterministic commands",
+  "kind": "router",
+  "fixture": "dangling-dependency",
+  "prompt": "Make issue api-client depend on auth-contract.",
+  "expected": {
+    "route": "deterministic_command",
+    "command": "agent-hub issue add-dependency",
+    "args": {
+      "issue": "api-client",
+      "depends_on": "auth-contract"
+    }
+  },
+  "must_not": [
+    "manual_edit_issue_file",
+    "rewrite_full_markdown",
+    "direct_yaml_mutation"
+  ],
+  "rubric": [
+    {
+      "id": "chooses_command",
+      "requirement": "The response selects the deterministic add-dependency command."
+    },
+    {
+      "id": "preserves_scope",
+      "requirement": "The response does not broaden the task beyond the requested dependency change."
+    }
+  ]
+}

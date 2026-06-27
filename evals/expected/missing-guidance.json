@@ -1,0 +1,28 @@
+{
+  "id": "missing-guidance",
+  "fixture": "missing-guidance",
+  "evaluations": [
+    {
+      "id": "audit-hub",
+      "command": ["audit", "hub"],
+      "result_file": ".hub/reports/latest-audit.json",
+      "match": "diagnostic_subset",
+      "expected_diagnostics": [
+        {
+          "code": "missing_required_project_guidance",
+          "severity": "error",
+          "target": ".hub/project/principles.md",
+          "message": "Required project guidance file is missing.",
+          "recommendation": "Create .hub/project/principles.md with the Agent Hub v3 required headings."
+        },
+        {
+          "code": "missing_required_project_guidance",
+          "severity": "error",
+          "target": ".hub/project/delegation.md",
+          "message": "Required delegation guidance file is missing.",
+          "recommendation": "Create .hub/project/delegation.md with the subagent handoff contract, evidence requirements, and stop conditions."
+        }
+      ]
+    }
+  ]
+}

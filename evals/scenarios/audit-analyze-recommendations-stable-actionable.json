@@ -1,0 +1,37 @@
+{
+  "id": "audit-analyze-recommendations-stable-actionable",
+  "title": "Audit and analyze recommendations are stable and actionable",
+  "kind": "diagnostic_quality",
+  "fixture": "broken-change-packet",
+  "prompt": "Audit the hub and analyze broken-change, then recommend next actions.",
+  "expected": {
+    "diagnostic_fields": [
+      "code",
+      "severity",
+      "target",
+      "message",
+      "recommendation"
+    ],
+    "recommendation_quality": "specific_actionable",
+    "stable_codes": [
+      "change_missing_issue",
+      "issue_change_mismatch",
+      "change_task_not_linked"
+    ]
+  },
+  "must_not": [
+    "freeform_only_diagnostics",
+    "unstable_code_names",
+    "recommendation_without_target"
+  ],
+  "rubric": [
+    {
+      "id": "machine_readable",
+      "requirement": "Every diagnostic includes stable machine-readable fields."
+    },
+    {
+      "id": "actionable_recommendation",
+      "requirement": "Recommendations identify the file or deterministic command needed to fix the issue."
+    }
+  ]
+}

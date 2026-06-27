@@ -1,0 +1,32 @@
+{
+  "id": "implementation-handoff-tdd",
+  "title": "Implementation handoff includes TDD requirements",
+  "kind": "handoff",
+  "fixture": "missing-tdd",
+  "prompt": "Create a handoff for a subagent to implement agent-hub audit hub.",
+  "expected": {
+    "handoff_type": "implementation",
+    "must_include": [
+      "failing tests or evals to satisfy",
+      "TDD policy",
+      "regression evidence requirements",
+      "final verification commands",
+      "expected initial failure"
+    ]
+  },
+  "must_not": [
+    "implementation_without_first_test",
+    "unbounded_scope",
+    "missing_validation_command"
+  ],
+  "rubric": [
+    {
+      "id": "states_tdd_first",
+      "requirement": "The handoff says implementation starts from failing deterministic tests or evals."
+    },
+    {
+      "id": "requires_final_verification",
+      "requirement": "The handoff lists the exact command the subagent must run after implementation."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+id: broken-change
+title: "Broken change packet"
+status: Draft
+priority: P1
+owner: Unassigned
+issues:
+  - api-client
+  - missing-contract
+depends_on: []
+blocks: []
+created_at: "2026-06-26T00:00:00Z"
+updated_at: "2026-06-26T00:00:00Z"

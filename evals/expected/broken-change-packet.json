@@ -1,0 +1,35 @@
+{
+  "id": "broken-change-packet",
+  "fixture": "broken-change-packet",
+  "evaluations": [
+    {
+      "id": "analyze-change",
+      "command": ["analyze", "change", "broken-change"],
+      "result_file": ".hub/reports/latest-analysis.json",
+      "match": "diagnostic_subset",
+      "expected_diagnostics": [
+        {
+          "code": "change_missing_issue",
+          "severity": "error",
+          "target": ".hub/changes/broken-change/change.yml",
+          "message": "Change packet references an issue file that does not exist.",
+          "recommendation": "Create .hub/issues/missing-contract.md or remove missing-contract from the change packet."
+        },
+        {
+          "code": "issue_change_mismatch",
+          "severity": "error",
+          "target": ".hub/issues/api-client.md",
+          "message": "Issue frontmatter points to a different change packet.",
+          "recommendation": "Set issue field change to broken-change or move the issue to the referenced packet."
+        },
+        {
+          "code": "change_task_not_linked",
+          "severity": "warning",
+          "target": ".hub/changes/broken-change/tasks.md",
+          "message": "Task list mentions an issue not linked from change.yml.",
+          "recommendation": "Add ui-shell to change.yml issues or remove it from tasks.md."
+        }
+      ]
+    }
+  ]
+}

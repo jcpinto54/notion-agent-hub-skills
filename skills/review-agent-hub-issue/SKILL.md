@@ -1,6 +1,6 @@
 ---
 name: review-agent-hub-issue
-description: Independent review gate for Agent Hub issues before completion. Use when a user asks to review, verify, approve, complete, close, accept, reject, send back, or quality-check a Notion Agent Hub issue in In Review, including code, docs, QA, research, decisions, handoffs, and PR-backed work.
+description: Independent review gate for Agent Hub issues before completion. Use when a user asks to review, verify, approve, complete, close, accept, reject, send back, or quality-check an Agent Hub issue in In Review, including code, docs, QA, research, decisions, handoffs, and PR-backed work.
 ---
 
 # Review Agent Hub Issue
@@ -13,17 +13,17 @@ Review durable evidence, not chat memory. Before reviewing, claim the issue for 
 2. Claim review:
 
 ```bash
-python3 <claim-skill-dir>/scripts/agent_hub_claim.py claim \
+python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py claim acquire \
   --purpose review \
-  --page-id '<issue>' \
+  --issue '<issue>' \
   --owner '<reviewer-name>'
 ```
 
 3. Fetch the full issue body, properties, dependencies, PR, commit, checks, and linked artifacts.
 4. Verify completion criteria, evidence, skipped checks, risks, and follow-ups.
 5. Decide pass, fail, or abandon.
-6. Append the review entry through Notion MCP.
-7. Release the review claim with the matching mode.
+6. Append the review entry through `agent-hub issue append-activity` or `agent-hub issue add-evidence` for repo-native hubs. Use Notion MCP only for legacy Notion hubs.
+7. Release the review claim with the matching mode through the deterministic claim command.
 8. Fetch the issue again and report final status, verification, dependency impact, and follow-ups.
 
 ## Pass Criteria
@@ -55,7 +55,7 @@ Final outcome:
 Then release:
 
 ```bash
-python3 <claim-skill-dir>/scripts/agent_hub_claim.py release --page-id '<issue>' --claim-id '<claim-id>' --mode review-pass
+python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py claim release --issue '<issue>' --claim-id '<claim-id>' --mode review-pass
 ```
 
 ## Fail Criteria
@@ -80,7 +80,7 @@ Recommended next step:
 Then release:
 
 ```bash
-python3 <claim-skill-dir>/scripts/agent_hub_claim.py release --page-id '<issue>' --claim-id '<claim-id>' --mode review-fail
+python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py claim release --issue '<issue>' --claim-id '<claim-id>' --mode review-fail
 ```
 
 The release sets `Owner = Unassigned` unless you pass an explicit owner.

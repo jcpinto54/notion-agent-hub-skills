@@ -1,0 +1,15 @@
+version: 3
+source_of_truth: file
+project: "Dangling Dependency"
+cli:
+  strict_writes: true
+  preserve_unknown_frontmatter: true
+agents:
+  enabled: false
+  require_subagent_for_tasks: true
+audit:
+  tdd_required_for_implementation: true
+  stale_claim_minutes: 120
+dashboard:
+  enabled: false
+  mode: read-only

@@ -1,0 +1,33 @@
+{
+  "id": "subagent-handoff-contract",
+  "title": "Subagent handoff includes required contract fields",
+  "kind": "handoff",
+  "fixture": "valid-lite-hub",
+  "prompt": "Prepare a bounded subagent handoff for fixing broken change packet diagnostics.",
+  "expected": {
+    "handoff_type": "bounded_subagent",
+    "must_include": [
+      "required files",
+      "scope",
+      "out-of-scope",
+      "expected output",
+      "evidence requirements",
+      "stop conditions"
+    ]
+  },
+  "must_not": [
+    "open_ended_assignment",
+    "missing_permitted_edits",
+    "missing_stop_conditions"
+  ],
+  "rubric": [
+    {
+      "id": "lists_required_files",
+      "requirement": "The handoff names the plan and specific fixture or implementation files to read."
+    },
+    {
+      "id": "contains_evidence_contract",
+      "requirement": "The handoff requires files changed, commands run, failing-before or passing-after evidence, blockers, and residual risks."
+    }
+  ]
+}

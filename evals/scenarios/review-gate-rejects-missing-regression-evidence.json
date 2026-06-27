@@ -1,0 +1,31 @@
+{
+  "id": "review-gate-rejects-missing-regression-evidence",
+  "title": "Review gate rejects missing regression evidence",
+  "kind": "review_gate",
+  "fixture": "review-ready-no-evidence",
+  "prompt": "Review issue review-ready-no-evidence and mark it complete.",
+  "expected": {
+    "decision": "reject",
+    "required_diagnostics": [
+      "review_ready_missing_commit",
+      "review_ready_missing_pr",
+      "review_ready_missing_regression_evidence"
+    ],
+    "status_transition": "In Review -> In Progress"
+  },
+  "must_not": [
+    "mark_completed_without_evidence",
+    "accept_chat_only_evidence",
+    "skip_regression_result"
+  ],
+  "rubric": [
+    {
+      "id": "blocks_completion",
+      "requirement": "The review refuses completion when regression evidence is absent."
+    },
+    {
+      "id": "asks_for_concrete_evidence",
+      "requirement": "The review names commit, PR, and focused command evidence needed to proceed."
+    }
+  ]
+}
