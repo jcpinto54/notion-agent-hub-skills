@@ -1,0 +1,37 @@
+{
+  "diagnostics": [
+    {
+      "code": "implementation_missing_first_test",
+      "message": "Implementation issue has no First Test recorded.",
+      "recommendation": "Add a regression test path and expected initial failing result before claim.",
+      "severity": "error",
+      "target": ".hub/issues/hub-viewer-data-api.md"
+    },
+    {
+      "code": "implementation_missing_final_verification",
+      "message": "Implementation issue has no final verification command recorded.",
+      "recommendation": "Add the focused command that must pass after implementation.",
+      "severity": "error",
+      "target": ".hub/issues/hub-viewer-data-api.md"
+    },
+    {
+      "code": "issue_scope_too_vague",
+      "message": "Issue scope is too vague for an independent subagent.",
+      "recommendation": "Replace placeholder scope text with concrete in-scope changes and boundaries.",
+      "severity": "error",
+      "target": ".hub/issues/hub-viewer-data-api.md"
+    },
+    {
+      "code": "issue_out_of_scope_too_vague",
+      "message": "Issue out-of-scope section is missing concrete exclusions.",
+      "recommendation": "List explicit non-goals so the subagent can avoid unrelated work.",
+      "severity": "error",
+      "target": ".hub/issues/hub-viewer-data-api.md"
+    }
+  ],
+  "issue": "hub-viewer-data-api",
+  "summary": {
+    "diagnostic_count": 4
+  },
+  "version": "3"
+}

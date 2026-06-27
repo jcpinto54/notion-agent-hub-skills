@@ -1,0 +1,41 @@
+version: 3
+updated_at: 2026-06-27T18:14:06.987907Z
+issues:
+  hub-viewer-data-api:
+    title: "Define read-only hub viewer data contract"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-kanban-viewer
+    depends_on: []
+    blocks:
+      - hub-viewer-kanban-ui
+  hub-viewer-kanban-ui:
+    title: "Implement read-only Kanban board UI"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-kanban-viewer
+    depends_on:
+      - hub-viewer-data-api
+    blocks:
+      - hub-viewer-smoke-tests
+  hub-viewer-smoke-tests:
+    title: "Add regression and Playwright smoke coverage for hub viewer"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-kanban-viewer
+    depends_on:
+      - hub-viewer-kanban-ui
+    blocks: []
+changes:
+  readonly-kanban-viewer:
+    title: "Build read-only Kanban hub viewer"
+    status: Draft
+    priority: P1
+    owner: codex
+    issues:
+      - hub-viewer-data-api
+      - hub-viewer-kanban-ui
+      - hub-viewer-smoke-tests
