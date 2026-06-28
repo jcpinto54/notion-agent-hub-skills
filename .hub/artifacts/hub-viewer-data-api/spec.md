@@ -1,32 +1,5 @@
----
-id: "hub-viewer-data-api"
-title: "Define read-only hub viewer data contract"
-status: "In Progress"
-type: "Feature"
-priority: "P1"
-owner: "codex-orchestrator"
-area: ""
-summary: ""
-blockers: ""
-dependency_notes: ""
-change: "readonly-kanban-viewer"
-depends_on: []
-blocks: ["hub-viewer-kanban-ui"]
-claim:
-  id: "hub-viewer-data-api-work-20260628"
-  purpose: "work"
-  owner: "codex-orchestrator"
-  claimed_at: "2026-06-28T10:43:23.793502Z"
-  expires_at: "2026-06-28T14:43:23.793502Z"
-  machine: "Joaos-MacBook-Pro.local"
-base_branch: "main"
-branch: "codex/agent-hub-v3-repo-native"
-worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
-commit_sha: ""
-pr_url: ""
-related_links: ""
-notion_url: ""
----
+# Define Read-Only Hub Viewer Data Contract
+
 ## Context
 
 Agent Hub needs a read-only dashboard data contract so a visual Kanban viewer can
@@ -110,27 +83,3 @@ None.
 ## Open Questions
 
 None.
-
-## Activity Log
-
-### Dogfood Seed
-Created during Agent Hub v3 dogfood bootstrap. Audit correctly reports this issue needs spec tightening, first-test definition, and final verification before claim.
-
-### Spec tightened
-Date: 2026-06-28
-Agent: Codex orchestrator
-Summary: Applied bounded data-contract spec through issue set-spec.
-Evidence: .hub/artifacts/hub-viewer-data-api/spec.md
-
-### Claimed for work
-Date: 2026-06-28T10:43:23.793502Z
-Agent: codex-orchestrator
-Claim ID: hub-viewer-data-api-work-20260628
-Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
-
-### Regression-first backend implementation
-First failing result: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 initially failed for missing set_issue_spec, missing dashboard_snapshot, and missing issue set-spec CLI command.
-Final focused result: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 passed after backend and CLI implementation.
-Touched: skills/manage-agent-hub-issues/lib/file_hub_common.py; skills/manage-agent-hub-issues/scripts/agent_hub.py; tests/test_file_hub_backend.py; tests/test_agent_hub_v3.py.
-Output contract: dashboard export now includes read-only mode, generated_at, hub metadata, columns, diagnostics, summary, card readiness, done criteria, and verification snippets.

@@ -132,6 +132,70 @@ class AgentHubV3Tests(unittest.TestCase):
         )
         return result
 
+    def agent_ready_spec(self) -> str:
+        return """# CLI Tightened Spec
+
+## Context
+
+The CLI needs deterministic commands for tightening issue specs and exporting a
+read-only dashboard snapshot.
+
+## Scope
+
+- Support `agent-hub issue set-spec`.
+- Support `agent-hub dashboard export`.
+
+## Out Of Scope
+
+- No mutable dashboard operations.
+- No web server.
+
+## Done Criteria
+
+- [ ] The CLI can tighten an issue spec from a markdown file.
+- [ ] The CLI can export a dashboard JSON file filtered by change.
+
+## Verification Strategy
+
+### Regression Target
+
+The top-level CLI exposes the new deterministic backend commands.
+
+### Test Plan
+
+- [ ] Unit: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+- [ ] Integration: top-level CLI smoke invokes both commands.
+- [ ] E2E / Playwright: Not applicable.
+- [ ] Manual / inspection: Inspect JSON output.
+
+### First Test
+
+Path: tests/test_agent_hub_v3.py::AgentHubV3Tests.test_top_level_cli_exists_and_supports_representative_v3_commands
+Expected initial result: fails before new CLI commands exist
+Reason this proves the regression or requirement: it exercises the public command surface.
+
+### Final Verification
+
+Commands: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+Expected result: all targeted tests pass
+
+### Untestable Surface
+
+None.
+
+## Assumptions
+
+- The dashboard command returns stable JSON.
+
+## Dependencies
+
+- Existing v3 CLI parser and backend helpers.
+
+## Open Questions
+
+None.
+"""
+
     def test_v3_hub_layout_initialization_creates_required_files_and_templates(self):
         root = self.make_repo()
 
@@ -635,6 +699,35 @@ Malformed frontmatter should be reported deterministically.
             "--change",
             "cli-change",
         )
+        spec_file = root / "cli-spec.md"
+        spec_file.write_text(self.agent_ready_spec(), encoding="utf-8")
+        self.assert_cli_ok(
+            root,
+            "issue",
+            "set-spec",
+            "--issue",
+            "cli-issue",
+            "--spec-file",
+            str(spec_file),
+        )
+        dashboard_path = root / "dashboard.json"
+        export_result = self.assert_cli_ok(
+            root,
+            "dashboard",
+            "export",
+            "--change",
+            "cli-change",
+            "--output",
+            str(dashboard_path),
+        )
+        export_payload = json.loads(export_result.stdout)
+        self.assertEqual(export_payload["output"], str(dashboard_path))
+        dashboard_payload = json.loads(dashboard_path.read_text(encoding="utf-8"))
+        self.assertEqual(dashboard_payload["mode"], "read-only")
+        self.assertEqual(dashboard_payload["change"], "cli-change")
+        stdout_dashboard = self.assert_cli_ok(root, "dashboard", "export", "--change", "cli-change")
+        stdout_payload = json.loads(stdout_dashboard.stdout)
+        self.assertEqual(stdout_payload["columns"][1]["title"], "Ready")
         self.assert_cli_ok(root, "change", "link-issue", "--change", "cli-change", "--issue", "cli-issue")
         self.assert_cli_ok(root, "issue", "add-dependency", "--issue", "cli-issue", "--depends-on", "cli-dependency")
         self.assert_cli_ok(root, "issue", "remove-dependency", "--issue", "cli-issue", "--depends-on", "cli-dependency")

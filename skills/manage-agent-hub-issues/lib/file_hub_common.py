@@ -151,6 +151,34 @@ CHANGE_TEMPLATES = {
 """,
 }
 
+SPEC_SECTION_HEADINGS = [
+    "## Context",
+    "## Scope",
+    "## Out Of Scope",
+    "## Done Criteria",
+    "## Verification Strategy",
+    "## Assumptions",
+    "## Dependencies",
+    "## Open Questions",
+]
+
+SPEC_DIAGNOSTIC_CODES = {
+    "implementation_missing_first_test",
+    "implementation_missing_final_verification",
+    "issue_scope_too_vague",
+    "issue_out_of_scope_too_vague",
+    "issue_done_criteria_not_observable",
+}
+
+DASHBOARD_COLUMNS = [
+    ("needs-spec", "Needs Spec"),
+    ("ready", "Ready"),
+    ("in-progress", "In Progress"),
+    ("in-review", "In Review"),
+    ("completed", "Completed"),
+    ("blocked", "Blocked"),
+]
+
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
@@ -1351,6 +1379,72 @@ def section_text(body: str, heading: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def markdown_heading_level(heading: str) -> int:
+    return len(heading) - len(heading.lstrip("#"))
+
+
+def markdown_section_text(body: str, heading: str) -> str | None:
+    level = markdown_heading_level(heading)
+    if level <= 0:
+        raise RuntimeError(f"Invalid markdown heading: {heading!r}")
+    heading_pattern = re.compile(rf"^{re.escape(heading)}\s*$", re.MULTILINE)
+    match = heading_pattern.search(body)
+    if not match:
+        return None
+    end_pattern = re.compile(rf"^#{{1,{level}}}\s+.*$", re.MULTILINE)
+    next_match = end_pattern.search(body, match.end())
+    end = next_match.start() if next_match else len(body)
+    return body[match.end() : end].strip()
+
+
+def render_markdown_section(heading: str, text: str) -> str:
+    text = text.strip()
+    return f"{heading}\n\n{text}".rstrip() if text else heading
+
+
+def activity_log_text(body: str) -> str:
+    section = markdown_section_text(body, "## Activity Log")
+    if section is None:
+        return "## Activity Log"
+    return render_markdown_section("## Activity Log", section)
+
+
+def bounded_spec_body(spec_body: str, existing_body: str) -> tuple[str, list[str]]:
+    sections: list[str] = []
+    updated: list[str] = []
+    for heading in SPEC_SECTION_HEADINGS:
+        text = markdown_section_text(spec_body, heading)
+        if text is not None:
+            updated.append(heading)
+        else:
+            text = markdown_section_text(existing_body, heading) or ""
+        sections.append(render_markdown_section(heading, text))
+    sections.append(activity_log_text(existing_body))
+    return "\n\n".join(sections).rstrip() + "\n", updated
+
+
+def set_issue_spec(hub_path: Path, issue_id: str, spec_file: Path) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    spec_path = spec_file.expanduser().resolve()
+    if not spec_path.exists() or not spec_path.is_file():
+        raise RuntimeError(f"Spec file does not exist: {spec_file}")
+    _, spec_body = parse_frontmatter(spec_path.read_text(encoding="utf-8"))
+    new_body, updated_sections = bounded_spec_body(spec_body, issue.body)
+    if not updated_sections:
+        raise RuntimeError("Spec file does not contain any bounded Agent Hub issue sections.")
+    issue.body = new_body
+    issue.write()
+    updated_issue = issue_by_id(hub_path, issue.id)
+    diagnostics = issue_audit_diagnostics(hub_path, updated_issue)
+    return {
+        "ok": True,
+        "issue": updated_issue.id,
+        "path": str(updated_issue.path),
+        "updated_sections": updated_sections,
+        "diagnostics": diagnostics,
+    }
+
+
 def field_value(section: str, field: str) -> str:
     match = re.search(rf"^{re.escape(field)}:\s*(.*)$", section, re.MULTILINE)
     return match.group(1).strip().strip("`") if match else ""
@@ -1479,6 +1573,173 @@ def issue_audit_diagnostics(hub_path: Path, issue: FileHubIssue) -> list[dict[st
         )
 
     return diagnostics
+
+
+def issue_dependency_diagnostics(
+    hub_path: Path, issue: FileHubIssue, by_id: dict[str, FileHubIssue]
+) -> list[dict[str, str]]:
+    diagnostics: list[dict[str, str]] = []
+    target = relative_hub_target(hub_path, issue.path)
+    for dep_id in issue.depends_on:
+        if dep_id not in by_id:
+            diagnostics.append(
+                diagnostic(
+                    "dangling_dependency",
+                    "error",
+                    target,
+                    f"Issue depends on missing issue {dep_id}.",
+                    f"Create .hub/issues/{dep_id}.md or remove the dependency with the deterministic command.",
+                )
+            )
+    return diagnostics
+
+
+def markdown_section_lines(body: str, heading: str) -> list[str]:
+    text = markdown_section_text(body, heading) or ""
+    return [line.rstrip() for line in text.splitlines() if line.strip()]
+
+
+def verification_snapshot(body: str) -> dict[str, dict[str, str]]:
+    first = markdown_section_text(body, "### First Test") or ""
+    final = markdown_section_text(body, "### Final Verification") or ""
+    return {
+        "first_test": {
+            "path": field_value(first, "Path"),
+            "expected_initial_result": field_value(first, "Expected initial result"),
+            "reason": field_value(
+                first, "Reason this proves the regression or requirement"
+            ),
+            "snippet": first,
+        },
+        "final_verification": {
+            "commands": field_value(final, "Commands"),
+            "expected_result": field_value(final, "Expected result"),
+            "snippet": final,
+        },
+    }
+
+
+def dashboard_column_id(
+    issue: FileHubIssue, diagnostics: list[dict[str, str]], readiness_state: str
+) -> str:
+    if issue.status == "In Progress":
+        return "in-progress"
+    if issue.status == "In Review":
+        return "in-review"
+    if issue.status == "Completed":
+        return "completed"
+    spec_codes = {item.get("code", "") for item in diagnostics}
+    if spec_codes.intersection(SPEC_DIAGNOSTIC_CODES):
+        return "needs-spec"
+    if readiness_state != "Ready":
+        return "blocked"
+    return "ready"
+
+
+def dashboard_sort_key(issue: FileHubIssue) -> tuple[int, str]:
+    return (PRIORITY_ORDER.get(issue.priority, 99), issue.id)
+
+
+def issue_dashboard_card(
+    hub_path: Path,
+    issue: FileHubIssue,
+    by_id: dict[str, FileHubIssue],
+    diagnostics: list[dict[str, str]],
+) -> dict[str, Any]:
+    ready_state, reason = readiness(issue, by_id)
+    return {
+        "id": issue.id,
+        "title": issue.title,
+        "status": issue.status,
+        "type": issue.type,
+        "priority": issue.priority,
+        "owner": issue.owner,
+        "change": issue.change,
+        "area": issue.area,
+        "summary": issue.summary,
+        "path": relative_hub_target(hub_path, issue.path),
+        "depends_on": issue.depends_on,
+        "blocks": issue.blocks,
+        "blockers": issue.blockers,
+        "fields": {
+            "status": issue.status,
+            "type": issue.type,
+            "priority": issue.priority,
+            "owner": issue.owner,
+            "change": issue.change,
+        },
+        "readiness": {"state": ready_state, "reason": reason},
+        "diagnostics": diagnostics,
+        "done_criteria": markdown_section_lines(issue.body, "## Done Criteria"),
+        "verification": verification_snapshot(issue.body),
+    }
+
+
+def dashboard_snapshot(hub_path: Path, change: str = "") -> dict[str, Any]:
+    change_filter = validate_change_slug(change) if change else ""
+    if change_filter and not change_yml_path(hub_path, change_filter).exists():
+        raise RuntimeError(f"No change packet found for {change_filter!r}.")
+    config = load_config(hub_path)
+    dashboard_config = config.get("dashboard") if isinstance(config.get("dashboard"), dict) else {}
+
+    issues_dir = hub_path / ISSUES_DIR
+    issue_paths = sorted(issues_dir.glob("*.md")) if issues_dir.exists() else []
+    valid_issues: list[FileHubIssue] = []
+    diagnostics: list[dict[str, str]] = []
+    for path in issue_paths:
+        if frontmatter_malformed(path):
+            diagnostics.append(malformed_frontmatter_diagnostic(hub_path, path))
+            continue
+        valid_issues.append(FileHubIssue.from_path(path))
+
+    by_id = {issue.id: issue for issue in valid_issues}
+    diagnostics.extend(runtime_claim_audit_diagnostics(hub_path, by_id))
+    filtered_issues = [
+        issue
+        for issue in valid_issues
+        if not change_filter or issue.change == change_filter
+    ]
+
+    grouped_cards: dict[str, list[dict[str, Any]]] = {
+        column_id: [] for column_id, _ in DASHBOARD_COLUMNS
+    }
+    for issue in sorted(filtered_issues, key=dashboard_sort_key):
+        issue_diagnostics = [
+            *issue_dependency_diagnostics(hub_path, issue, by_id),
+            *issue_audit_diagnostics(hub_path, issue),
+        ]
+        diagnostics.extend(issue_diagnostics)
+        ready_state, _ = readiness(issue, by_id)
+        column_id = dashboard_column_id(issue, issue_diagnostics, ready_state)
+        grouped_cards[column_id].append(
+            issue_dashboard_card(hub_path, issue, by_id, issue_diagnostics)
+        )
+
+    columns = [
+        {"id": column_id, "title": title, "issues": grouped_cards[column_id]}
+        for column_id, title in DASHBOARD_COLUMNS
+    ]
+    return {
+        "version": "3",
+        "generated_at": isoformat(now_utc()),
+        "mode": "read-only",
+        "change": change_filter,
+        "hub": {
+            "project": str(config.get("project") or ""),
+            "source_of_truth": str(config.get("source_of_truth") or "file"),
+            "dashboard_mode": str(dashboard_config.get("mode") or "read-only"),
+        },
+        "columns": columns,
+        "diagnostics": diagnostics,
+        "summary": {
+            "issue_count": len(filtered_issues),
+            "diagnostic_count": len(diagnostics),
+            "columns": {
+                title: len(grouped_cards[column_id])
+                for column_id, title in DASHBOARD_COLUMNS
+            },
+        },
+    }
 
 
 def extract_task_issue_ids(tasks_text: str) -> list[str]:

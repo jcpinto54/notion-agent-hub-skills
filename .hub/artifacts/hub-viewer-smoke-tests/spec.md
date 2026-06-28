@@ -1,26 +1,5 @@
----
-id: "hub-viewer-smoke-tests"
-title: "Add regression and Playwright smoke coverage for hub viewer"
-status: "Not Started"
-type: "Feature"
-priority: "P1"
-owner: "Unassigned"
-area: ""
-summary: ""
-blockers: ""
-dependency_notes: ""
-change: "readonly-kanban-viewer"
-depends_on: ["hub-viewer-kanban-ui"]
-blocks: []
-claim: {}
-base_branch: ""
-branch: ""
-worktree_path: ""
-commit_sha: ""
-pr_url: ""
-related_links: ""
-notion_url: ""
----
+# Add Regression And Browser Smoke Coverage For Hub Viewer
+
 ## Context
 
 The read-only Kanban viewer should be protected by deterministic regression
@@ -101,14 +80,3 @@ this first read-only version.
 ## Open Questions
 
 None.
-
-## Activity Log
-
-### Dogfood Seed
-Created during Agent Hub v3 dogfood bootstrap. This issue should remain dependency-waiting until the UI exists, then own regression and browser smoke coverage for the read-only hub viewer.
-
-### Spec tightened
-Date: 2026-06-28
-Agent: Codex orchestrator
-Summary: Applied bounded regression and browser smoke spec through issue set-spec.
-Evidence: .hub/artifacts/hub-viewer-smoke-tests/spec.md

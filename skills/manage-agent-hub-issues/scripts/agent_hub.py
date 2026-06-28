@@ -84,6 +84,15 @@ def build_parser() -> argparse.ArgumentParser:
     add_evidence.add_argument("--issue", required=True)
     add_evidence.add_argument("--heading", default="Evidence")
     add_evidence.add_argument("--line", action="append", default=[])
+    set_spec = issue_sub.add_parser("set-spec")
+    set_spec.add_argument("--issue", required=True)
+    set_spec.add_argument("--spec-file", type=Path, required=True)
+
+    dashboard = commands.add_parser("dashboard", help="Read-only dashboard operations.")
+    dashboard_sub = dashboard.add_subparsers(dest="dashboard_command", required=True)
+    dashboard_export = dashboard_sub.add_parser("export")
+    dashboard_export.add_argument("--change", default="")
+    dashboard_export.add_argument("--output", type=Path)
 
     claim = commands.add_parser("claim", help="Claim operations.")
     claim_sub = claim.add_subparsers(dest="claim_command", required=True)
@@ -181,6 +190,19 @@ def run(args: argparse.Namespace) -> Any:
             return file_hub.append_issue_activity(hub, args.issue, args.heading, args.line)
         if args.issue_command == "add-evidence":
             return file_hub.add_issue_evidence(hub, args.issue, args.heading, args.line)
+        if args.issue_command == "set-spec":
+            return file_hub.set_issue_spec(hub, args.issue, args.spec_file)
+
+    if args.command == "dashboard" and args.dashboard_command == "export":
+        snapshot = file_hub.dashboard_snapshot(hub, change=args.change)
+        if args.output:
+            output_path = args.output.expanduser()
+            file_hub.atomic_write(
+                output_path,
+                json.dumps(snapshot, indent=2, sort_keys=True) + "\n",
+            )
+            return {"ok": True, "output": str(output_path), "summary": snapshot["summary"]}
+        return snapshot
 
     if args.command == "claim":
         issue = file_hub.issue_by_id(hub, args.issue)

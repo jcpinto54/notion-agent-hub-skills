@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent Hub Viewer</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="icon-rail" aria-label="Agent Hub navigation">
+        <div class="rail-mark" aria-hidden="true">AH</div>
+        <button class="rail-button is-active" type="button" aria-label="Kanban board">B</button>
+        <button class="rail-button" type="button" aria-label="Audit summary">A</button>
+        <button class="rail-button" type="button" aria-label="Issue details">I</button>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>Agent Hub</h1>
+            <p id="project-meta">Loading hub state...</p>
+          </div>
+          <div class="topbar-meta" aria-label="Hub metadata">
+            <span id="source-label">Source: -</span>
+            <span id="generated-label">Generated: -</span>
+          </div>
+        </header>
+
+        <div id="error-banner" class="error-banner" hidden></div>
+
+        <section class="content-grid" aria-label="Read-only hub dashboard">
+          <aside class="side-panel">
+            <label class="select-label" for="change-filter">Change Packet</label>
+            <select id="change-filter"></select>
+
+            <section class="metric-group" aria-label="Audit health">
+              <h2>Audit Health</h2>
+              <div id="audit-metrics" class="metrics"></div>
+            </section>
+
+            <section class="metric-group" aria-label="Readiness summary">
+              <h2>Readiness</h2>
+              <div id="readiness-metrics" class="metrics"></div>
+            </section>
+
+            <section class="metric-group" aria-label="Filters">
+              <h2>Filters</h2>
+              <label class="select-label" for="priority-filter">Priority</label>
+              <select id="priority-filter">
+                <option value="">All priorities</option>
+              </select>
+              <label class="select-label" for="owner-filter">Owner</label>
+              <select id="owner-filter">
+                <option value="">All owners</option>
+              </select>
+              <label class="toggle-row">
+                <input id="hide-completed" type="checkbox">
+                <span>Hide completed</span>
+              </label>
+            </section>
+          </aside>
+
+          <section class="board-region">
+            <div id="board" class="board" aria-label="Issue Kanban board"></div>
+            <section id="detail-panel" class="detail-panel" aria-live="polite"></section>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

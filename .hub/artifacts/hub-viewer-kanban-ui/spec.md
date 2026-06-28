@@ -1,26 +1,5 @@
----
-id: "hub-viewer-kanban-ui"
-title: "Implement read-only Kanban board UI"
-status: "Not Started"
-type: "Feature"
-priority: "P1"
-owner: "Unassigned"
-area: ""
-summary: ""
-blockers: ""
-dependency_notes: ""
-change: "readonly-kanban-viewer"
-depends_on: ["hub-viewer-data-api"]
-blocks: ["hub-viewer-smoke-tests"]
-claim: {}
-base_branch: ""
-branch: ""
-worktree_path: ""
-commit_sha: ""
-pr_url: ""
-related_links: ""
-notion_url: ""
----
+# Implement Read-Only Kanban Board UI
+
 ## Context
 
 Agent Hub needs a small visual surface for humans and agents to inspect `.hub`
@@ -114,14 +93,3 @@ automated assertion.
 ## Open Questions
 
 None.
-
-## Activity Log
-
-### Dogfood Seed
-Created during Agent Hub v3 dogfood bootstrap. Next step is a subagent spec pass that defines the board columns, card fields, no-write boundary, first failing tests, and Playwright verification.
-
-### Spec tightened
-Date: 2026-06-28
-Agent: Codex orchestrator
-Summary: Applied bounded read-only Kanban UI spec through issue set-spec.
-Evidence: .hub/artifacts/hub-viewer-kanban-ui/spec.md

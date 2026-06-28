@@ -29,6 +29,25 @@ python3 <skill-dir>/scripts/agent_hub_list.py --hub-root '<repo>/.hub'
 python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>'
 ```
 
+## Read-Only Viewer
+
+For repo-native hubs, use the main v3 CLI to export a static dashboard snapshot,
+then serve this skill's viewer directory:
+
+```bash
+python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py \
+  --repo '<target-repo>' \
+  dashboard export \
+  --change '<change-slug>' \
+  --output '<repo>/skills/list-agent-hub-issues/viewer/hub-state.json'
+
+python3 -m http.server 8765 --directory '<repo>/skills/list-agent-hub-issues/viewer'
+```
+
+Open `http://localhost:8765`. The viewer is read-only: it consumes
+`hub-state.json` or the bundled sample state, and it does not parse or mutate
+`.hub` files in the browser.
+
 ## What The Script Computes
 
 - Renders three Markdown boards by default, in order: `Eligible (Not Started)`, `Eligible (In Review)`, and `Blocked`.

@@ -45,6 +45,77 @@ class FileHubBackendTests(unittest.TestCase):
         hub = file_hub.create_hub(root, "Test Project")
         return temp, root, hub
 
+    def agent_ready_spec(self) -> str:
+        return """# Tightened Spec
+
+## Context
+
+The read-only Kanban viewer and spec tightening command need deterministic
+backend behavior that agents can rely on without hand-editing `.hub` files.
+
+## Scope
+
+- Add a deterministic `issue set-spec` backend path.
+- Replace only the bounded spec sections in an existing issue.
+- Preserve the issue frontmatter and existing activity log.
+
+## Out Of Scope
+
+- No hosted web dashboard.
+- No Notion mirror updates.
+
+## Done Criteria
+
+- [ ] Existing frontmatter keys survive spec tightening.
+- [ ] Bounded spec sections are replaced from the spec file.
+- [ ] Existing activity log entries remain append-only.
+
+## Verification Strategy
+
+### Regression Target
+
+The backend can tighten a vague issue into an audit-clean implementation spec.
+
+### Test Plan
+
+- [ ] Unit: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+- [ ] Integration: CLI smoke covers issue set-spec and dashboard export.
+- [ ] E2E / Playwright: Not applicable for the backend-only command.
+- [ ] Manual / inspection: Inspect the resulting issue markdown.
+
+### First Test
+
+Path: tests/test_file_hub_backend.py::FileHubBackendTests.test_set_issue_spec_preserves_frontmatter_replaces_sections_and_clears_diagnostics
+Expected initial result: fails before deterministic set-spec support exists
+Reason this proves the regression or requirement: it exercises the exact issue rewrite contract.
+
+### Final Verification
+
+Commands: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+Expected result: all targeted tests pass
+
+### Untestable Surface
+
+None.
+
+## Assumptions
+
+- Spec files use the same bounded headings as issue templates.
+
+## Dependencies
+
+- Existing issue frontmatter parsing and writing helpers.
+
+## Open Questions
+
+None.
+"""
+
+    def set_agent_ready_body(self, issue: file_hub.FileHubIssue) -> file_hub.FileHubIssue:
+        issue.body = self.agent_ready_spec().split("# Tightened Spec\n", 1)[1].lstrip()
+        issue.write()
+        return file_hub.issue_by_id(issue.path.parent.parent, issue.id)
+
     def test_parse_and_write_issue_frontmatter(self):
         temp, _, hub = self.make_repo()
         self.addCleanup(temp.cleanup)
@@ -158,6 +229,157 @@ class FileHubBackendTests(unittest.TestCase):
         self.assertLess(text.index("### Progress"), text.index("### Review"))
         self.assertIn("Summary: first", text)
         self.assertIn("Summary: second", text)
+
+    def test_set_issue_spec_preserves_frontmatter_replaces_sections_and_clears_diagnostics(self):
+        temp, root, hub = self.make_repo()
+        self.addCleanup(temp.cleanup)
+
+        issue = file_hub.create_issue_file(hub, "Rough Issue", "rough-issue")
+        frontmatter, body = file_hub.parse_frontmatter(issue.path.read_text(encoding="utf-8"))
+        frontmatter["custom_field"] = "keep-me"
+        issue.path.write_text(file_hub.dump_frontmatter(frontmatter) + body, encoding="utf-8")
+        issue = file_hub.issue_by_id(hub, "rough-issue")
+        issue.append_activity("Progress", ["Summary: existing note"])
+
+        before_codes = {
+            item["code"] for item in file_hub.issue_audit_diagnostics(hub, issue)
+        }
+        self.assertIn("implementation_missing_first_test", before_codes)
+        self.assertIn("implementation_missing_final_verification", before_codes)
+
+        spec_file = root / "spec.md"
+        spec_file.write_text(self.agent_ready_spec(), encoding="utf-8")
+        set_issue_spec = getattr(file_hub, "set_issue_spec", None)
+        self.assertTrue(callable(set_issue_spec), "set_issue_spec backend helper is required.")
+
+        result = set_issue_spec(hub, "rough-issue", spec_file)
+
+        self.assertEqual(result["issue"], "rough-issue")
+        updated_frontmatter, updated_body = file_hub.parse_frontmatter(
+            issue.path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(updated_frontmatter["custom_field"], "keep-me")
+        self.assertEqual(updated_frontmatter["status"], "Not Started")
+        self.assertIn("## Context", updated_body)
+        self.assertIn("## Scope", updated_body)
+        self.assertIn("Add a deterministic `issue set-spec` backend path.", updated_body)
+        self.assertNotIn("## Context\n\n## Scope", updated_body)
+        self.assertIn("### Progress\nSummary: existing note", updated_body)
+        self.assertLess(updated_body.index("## Open Questions"), updated_body.index("## Activity Log"))
+
+        updated_issue = file_hub.issue_by_id(hub, "rough-issue")
+        self.assertTrue(file_hub.has_first_test(updated_issue.body))
+        self.assertTrue(file_hub.has_final_verification(updated_issue.body))
+        self.assertEqual(file_hub.issue_audit_diagnostics(hub, updated_issue), [])
+
+    def test_dashboard_snapshot_is_read_only_change_filtered_kanban_payload(self):
+        temp, _, hub = self.make_repo()
+        self.addCleanup(temp.cleanup)
+        file_hub.create_change_packet(hub, "viewer-change", "Viewer Change")
+        file_hub.create_change_packet(hub, "other-change", "Other Change")
+
+        def linked_issue(issue_id: str, title: str, status: str = "Not Started"):
+            issue = file_hub.create_issue_file(
+                hub,
+                title,
+                issue_id,
+                change="viewer-change",
+            )
+            file_hub.link_issue_to_change(hub, "viewer-change", issue.id)
+            issue = file_hub.issue_by_id(hub, issue.id)
+            if status != "Not Started":
+                issue.status = status
+            return issue
+
+        needs_spec = linked_issue("needs-spec", "Needs Spec")
+        ready = self.set_agent_ready_body(linked_issue("ready-card", "Ready Card"))
+        in_progress = self.set_agent_ready_body(
+            linked_issue("progress-card", "Progress Card", "In Progress")
+        )
+        in_review = self.set_agent_ready_body(
+            linked_issue("review-card", "Review Card", "In Review")
+        )
+        completed = self.set_agent_ready_body(
+            linked_issue("completed-card", "Completed Card", "Completed")
+        )
+        blocked = self.set_agent_ready_body(linked_issue("blocked-card", "Blocked Card"))
+        blocked.blockers = "Waiting for external credentials"
+        blocked.write()
+        other = file_hub.create_issue_file(
+            hub,
+            "Other Change Card",
+            "other-card",
+            change="other-change",
+        )
+        file_hub.link_issue_to_change(hub, "other-change", other.id)
+
+        state_path = hub / "state.yml"
+        state_before = state_path.read_text(encoding="utf-8")
+        reports_before = sorted(
+            path.relative_to(hub).as_posix()
+            for path in (hub / "reports").rglob("*")
+        )
+
+        dashboard_snapshot = getattr(file_hub, "dashboard_snapshot", None)
+        self.assertTrue(callable(dashboard_snapshot), "dashboard_snapshot helper is required.")
+        snapshot = dashboard_snapshot(hub, change="viewer-change")
+
+        self.assertEqual(state_path.read_text(encoding="utf-8"), state_before)
+        reports_after = sorted(
+            path.relative_to(hub).as_posix()
+            for path in (hub / "reports").rglob("*")
+        )
+        self.assertEqual(reports_after, reports_before)
+
+        self.assertEqual(snapshot["version"], "3")
+        self.assertIn("generated_at", snapshot)
+        self.assertEqual(snapshot["mode"], "read-only")
+        self.assertEqual(snapshot["change"], "viewer-change")
+        self.assertEqual(snapshot["hub"]["project"], "Test Project")
+        self.assertEqual(snapshot["hub"]["source_of_truth"], "file")
+        self.assertEqual(snapshot["hub"]["dashboard_mode"], "read-only")
+        self.assertEqual(
+            [column["title"] for column in snapshot["columns"]],
+            ["Needs Spec", "Ready", "In Progress", "In Review", "Completed", "Blocked"],
+        )
+        cards_by_column = {
+            column["title"]: [card["id"] for card in column["issues"]]
+            for column in snapshot["columns"]
+        }
+        self.assertEqual(cards_by_column["Needs Spec"], [needs_spec.id])
+        self.assertEqual(cards_by_column["Ready"], [ready.id])
+        self.assertEqual(cards_by_column["In Progress"], [in_progress.id])
+        self.assertEqual(cards_by_column["In Review"], [in_review.id])
+        self.assertEqual(cards_by_column["Completed"], [completed.id])
+        self.assertEqual(cards_by_column["Blocked"], [blocked.id])
+        all_ids = [issue_id for values in cards_by_column.values() for issue_id in values]
+        self.assertNotIn("other-card", all_ids)
+
+        cards = {
+            card["id"]: card
+            for column in snapshot["columns"]
+            for card in column["issues"]
+        }
+        ready_card = cards["ready-card"]
+        self.assertEqual(ready_card["readiness"], {"state": "Ready", "reason": ""})
+        self.assertEqual(ready_card["diagnostics"], [])
+        self.assertIn("Existing frontmatter keys survive", "\n".join(ready_card["done_criteria"]))
+        self.assertEqual(
+            ready_card["verification"]["first_test"]["path"],
+            "tests/test_file_hub_backend.py::FileHubBackendTests.test_set_issue_spec_preserves_frontmatter_replaces_sections_and_clears_diagnostics",
+        )
+        self.assertIn(
+            "python3 -m unittest",
+            ready_card["verification"]["final_verification"]["commands"],
+        )
+
+        needs_spec_codes = {item["code"] for item in cards["needs-spec"]["diagnostics"]}
+        self.assertIn("implementation_missing_first_test", needs_spec_codes)
+        self.assertIn("issue_scope_too_vague", needs_spec_codes)
+        self.assertEqual(cards["blocked-card"]["readiness"]["state"], "Blocked")
+        self.assertIn("external blocker", cards["blocked-card"]["readiness"]["reason"])
+        review_codes = {item["code"] for item in cards["review-card"]["diagnostics"]}
+        self.assertIn("review_ready_missing_commit", review_codes)
 
     def test_list_and_claim_scripts_auto_detect_file_backend(self):
         temp, root, hub = self.make_repo()

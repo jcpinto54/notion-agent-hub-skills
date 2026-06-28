@@ -228,6 +228,14 @@ agent-hub --repo /path/to/repo issue create \
   --change checkout-retry
 ```
 
+Tighten an issue spec from a bounded Markdown draft:
+
+```bash
+agent-hub --repo /path/to/repo issue set-spec \
+  --issue hub-123 \
+  --spec-file /path/to/spec.md
+```
+
 Claim ready work for a bounded subagent:
 
 ```bash
@@ -265,6 +273,30 @@ agent-hub --repo /path/to/repo analyze change checkout-retry
 
 Reports are written to `.hub/reports/` as JSON for stable diagnostics and
 Markdown for humans.
+
+Export a read-only Kanban/dashboard snapshot without refreshing state or writing
+reports:
+
+```bash
+agent-hub --repo /path/to/repo dashboard export --change checkout-retry
+agent-hub --repo /path/to/repo dashboard export \
+  --change checkout-retry \
+  --output /tmp/checkout-retry-dashboard.json
+```
+
+Open the dependency-free viewer by serving the static files and pointing them at
+an exported snapshot:
+
+```bash
+agent-hub --repo /path/to/repo dashboard export \
+  --change checkout-retry \
+  --output skills/list-agent-hub-issues/viewer/hub-state.json
+
+python3 -m http.server 8765 --directory skills/list-agent-hub-issues/viewer
+```
+
+Then open `http://localhost:8765`. The viewer is read-only and consumes the
+JSON snapshot; it never parses or mutates `.hub` files in the browser.
 
 ## Install
 

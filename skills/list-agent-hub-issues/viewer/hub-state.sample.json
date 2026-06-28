@@ -1,0 +1,132 @@
+{
+  "version": "3",
+  "mode": "read-only",
+  "change": "readonly-kanban-viewer",
+  "generated_at": "2026-06-28T00:00:00Z",
+  "hub": {
+    "project": "agent-hub-skills"
+  },
+  "columns": [
+    {
+      "id": "needs-spec",
+      "title": "Needs Spec",
+      "issues": [
+        {
+          "id": "hub-viewer-data-api",
+          "title": "Define read-only hub viewer data contract",
+          "status": "Not Started",
+          "type": "Feature",
+          "priority": "P1",
+          "owner": "Unassigned",
+          "change": "readonly-kanban-viewer",
+          "area": "",
+          "summary": "Create a stable JSON contract for the read-only viewer.",
+          "path": ".hub/issues/hub-viewer-data-api.md",
+          "depends_on": [],
+          "blocks": ["hub-viewer-kanban-ui"],
+          "blockers": "",
+          "readiness": {
+            "state": "Ready",
+            "reason": ""
+          },
+          "diagnostics": [
+            {
+              "code": "issue_scope_too_vague",
+              "severity": "error",
+              "target": ".hub/issues/hub-viewer-data-api.md",
+              "message": "Issue scope is too vague for an independent subagent.",
+              "recommendation": "Replace placeholder scope text."
+            }
+          ],
+          "done_criteria": ["- [ ] Dashboard JSON schema is versioned and stable."],
+          "verification": {
+            "first_test": {
+              "path": "tests/test_file_hub_backend.py",
+              "expected_initial_result": "fails before dashboard export exists",
+              "reason": "exercises the public data contract",
+              "snippet": ""
+            },
+            "final_verification": {
+              "commands": "python3 -m unittest tests.test_file_hub_backend",
+              "expected_result": "passes",
+              "snippet": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ready",
+      "title": "Ready",
+      "issues": [
+        {
+          "id": "hub-viewer-kanban-ui",
+          "title": "Implement read-only Kanban board UI",
+          "status": "Not Started",
+          "type": "Feature",
+          "priority": "P1",
+          "owner": "Unassigned",
+          "change": "readonly-kanban-viewer",
+          "area": "",
+          "summary": "Render dashboard JSON as a read-only Kanban board.",
+          "path": ".hub/issues/hub-viewer-kanban-ui.md",
+          "depends_on": ["hub-viewer-data-api"],
+          "blocks": ["hub-viewer-smoke-tests"],
+          "blockers": "",
+          "readiness": {
+            "state": "Ready",
+            "reason": ""
+          },
+          "diagnostics": [],
+          "done_criteria": ["- [ ] Static viewer renders all six Kanban columns."],
+          "verification": {
+            "first_test": {
+              "path": "tests/test_hub_viewer_static.py",
+              "expected_initial_result": "fails before viewer files exist",
+              "reason": "guards the static app contract",
+              "snippet": ""
+            },
+            "final_verification": {
+              "commands": "python3 -m unittest tests.test_hub_viewer_static",
+              "expected_result": "passes",
+              "snippet": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "in-progress",
+      "title": "In Progress",
+      "issues": []
+    },
+    {
+      "id": "in-review",
+      "title": "In Review",
+      "issues": []
+    },
+    {
+      "id": "completed",
+      "title": "Completed",
+      "issues": []
+    },
+    {
+      "id": "blocked",
+      "title": "Blocked",
+      "issues": []
+    }
+  ],
+  "diagnostics": [],
+  "summary": {
+    "issue_count": 2,
+    "diagnostic_count": 1,
+    "columns": {
+      "Needs Spec": 1,
+      "Ready": 1,
+      "In Progress": 0,
+      "In Review": 0,
+      "Completed": 0,
+      "Blocked": 0
+    }
+  }
+}
