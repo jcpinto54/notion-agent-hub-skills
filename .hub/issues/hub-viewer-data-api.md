@@ -1,10 +1,10 @@
 ---
 id: "hub-viewer-data-api"
 title: "Define read-only hub viewer data contract"
-status: "In Progress"
+status: "Completed"
 type: "Feature"
 priority: "P1"
-owner: "codex-orchestrator"
+owner: "codex-reviewer"
 area: ""
 summary: ""
 blockers: ""
@@ -12,18 +12,12 @@ dependency_notes: ""
 change: "readonly-kanban-viewer"
 depends_on: []
 blocks: ["hub-viewer-kanban-ui"]
-claim:
-  id: "hub-viewer-data-api-work-20260628"
-  purpose: "work"
-  owner: "codex-orchestrator"
-  claimed_at: "2026-06-28T10:43:23.793502Z"
-  expires_at: "2026-06-28T14:43:23.793502Z"
-  machine: "Joaos-MacBook-Pro.local"
+claim: {}
 base_branch: "main"
 branch: "codex/agent-hub-v3-repo-native"
 worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
-commit_sha: ""
-pr_url: ""
+commit_sha: "b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9"
+pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/1"
 related_links: ""
 notion_url: ""
 ---
@@ -134,3 +128,53 @@ First failing result: python3 -m unittest tests.test_file_hub_backend tests.test
 Final focused result: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 passed after backend and CLI implementation.
 Touched: skills/manage-agent-hub-issues/lib/file_hub_common.py; skills/manage-agent-hub-issues/scripts/agent_hub.py; tests/test_file_hub_backend.py; tests/test_agent_hub_v3.py.
 Output contract: dashboard export now includes read-only mode, generated_at, hub metadata, columns, diagnostics, summary, card readiness, done criteria, and verification snippets.
+
+### Status change: In Progress -> In Review
+Date: 2026-06-28
+Agent: codex-orchestrator
+Implemented: deterministic set-spec command and dashboard export snapshot contract.
+Touched: skills/manage-agent-hub-issues/lib/file_hub_common.py; skills/manage-agent-hub-issues/scripts/agent_hub.py; tests/test_file_hub_backend.py; tests/test_agent_hub_v3.py; README.md.
+Checks run: python3 -m unittest discover -s tests; python3 evals/run_evals.py; skill metadata validation; git diff --check.
+Artifacts: PR https://github.com/jcpinto54/notion-agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9.
+Risks / skipped checks: none for backend data contract; browser QA belongs to dependent smoke issue.
+Reviewer should verify: schema fields, deterministic writes, read-only export, and tests.
+
+### Released claim (submitted)
+Date: 2026-06-28T10:46:35.751486Z
+Claim ID: hub-viewer-data-api-work-20260628
+Mode: submitted
+Status: In Review
+Owner: Unassigned
+
+### Claimed for review
+Date: 2026-06-28T10:49:54.908351Z
+Agent: codex-reviewer
+Claim ID: hub-viewer-data-api-review-20260628
+Branch: codex/agent-hub-v3-repo-native
+Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+
+### Review verification
+Command: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+Result: passed, 23 tests OK
+Command: python3 skills/manage-agent-hub-issues/scripts/agent_hub.py dashboard export --change readonly-kanban-viewer
+Result: passed, schema version 3, read-only mode, correct change filter and columns
+Command: python3 skills/manage-agent-hub-issues/scripts/agent_hub.py dashboard export --change definitely-missing-change
+Result: failed as expected with No change packet found
+
+### Status change: In Review -> Completed
+Date: 2026-06-28
+Reviewer: codex-reviewer
+Review type: independent backend/data-contract review
+Reviewed: issue spec, evidence, tests, backend, CLI, README, PR URL, commit SHA
+Verification: focused tests passed; export schema and missing-change refusal verified
+Dependencies: none
+Follow-ups: dependent UI and smoke issues are unblocked by completion
+Risks / skipped checks: live GitHub PR metadata was not fetched by the review subagent; local commit and pushed branch evidence were used
+Final outcome: PASS
+
+### Released claim (review-pass)
+Date: 2026-06-28T10:49:55.142177Z
+Claim ID: hub-viewer-data-api-review-20260628
+Mode: review-pass
+Status: Completed
+Owner: codex-reviewer

@@ -1,10 +1,10 @@
 ---
 id: "hub-viewer-smoke-tests"
 title: "Add regression and Playwright smoke coverage for hub viewer"
-status: "Not Started"
+status: "Completed"
 type: "Feature"
 priority: "P1"
-owner: "Unassigned"
+owner: "codex-reviewer"
 area: ""
 summary: ""
 blockers: ""
@@ -13,11 +13,11 @@ change: "readonly-kanban-viewer"
 depends_on: ["hub-viewer-kanban-ui"]
 blocks: []
 claim: {}
-base_branch: ""
-branch: ""
-worktree_path: ""
-commit_sha: ""
-pr_url: ""
+base_branch: "main"
+branch: "codex/agent-hub-v3-repo-native"
+worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
+commit_sha: "b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9"
+pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/1"
 related_links: ""
 notion_url: ""
 ---
@@ -112,3 +112,79 @@ Date: 2026-06-28
 Agent: Codex orchestrator
 Summary: Applied bounded regression and browser smoke spec through issue set-spec.
 Evidence: .hub/artifacts/hub-viewer-smoke-tests/spec.md
+
+### Claimed for work
+Date: 2026-06-28T10:54:00.832493Z
+Agent: codex-orchestrator
+Claim ID: hub-viewer-smoke-tests-work-20260628
+Branch: codex/agent-hub-v3-repo-native
+Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+
+### Regression and browser smoke verification
+Command: python3 -m unittest discover -s tests
+Result: passed, 49 tests OK
+Command: python3 evals/run_evals.py
+Result: passed, 16 scenario evals OK
+Command: for skill in skills/*; do python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py ""; done
+Result: passed, all 13 skills valid
+Command: git diff --check
+Result: passed, no whitespace errors
+Command: Browser/IAB desktop and mobile smoke against http://localhost:8765
+Result: passed, page identity/nonblank/console/cards/detail/mobile no-overflow verified
+
+### Status change: In Progress -> In Review
+Date: 2026-06-28
+Agent: codex-orchestrator
+Implemented: static regression tests plus full unit/eval/skill/browser verification evidence for read-only viewer.
+Touched: tests/test_hub_viewer_static.py plus validation reports generated outside tracked source.
+Checks run: unit discovery; evals; skill metadata validation; diff check; Browser/IAB desktop/mobile smoke.
+Artifacts: PR https://github.com/jcpinto54/notion-agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9; screenshots /tmp/agent-hub-viewer-desktop.png and /tmp/agent-hub-viewer-mobile.png.
+Risks / skipped checks: no committed Playwright suite; Browser/IAB smoke is durable issue evidence only.
+Reviewer should verify: validation evidence covers unit, eval, skill metadata, browser desktop/mobile, and no generated artifacts are committed.
+
+### Released claim (submitted)
+Date: 2026-06-28T10:54:01.059918Z
+Claim ID: hub-viewer-smoke-tests-work-20260628
+Mode: submitted
+Status: In Review
+Owner: Unassigned
+
+### Claimed for review
+Date: 2026-06-28T10:56:46.184619Z
+Agent: codex-reviewer
+Claim ID: hub-viewer-smoke-tests-review-20260628
+Branch: codex/agent-hub-v3-repo-native
+Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+
+### Review verification
+Command: python3 -m unittest tests.test_hub_viewer_static
+Result: passed, 2 tests OK
+Command: python3 -m unittest tests.test_hub_viewer_static tests.test_file_hub_backend tests.test_agent_hub_v3
+Result: passed, 25 tests OK
+Command: python3 -m unittest discover -s tests
+Result: passed, 49 tests OK
+Command: git status --short --ignored
+Result: generated hub-state.json is ignored; screenshots/logs are not committed; unrelated docs/resolver-consolidation-plan.md remains untracked
+
+### Status change: In Review -> Completed
+Date: 2026-06-28
+Reviewer: codex-reviewer
+Review type: independent regression and browser evidence review
+Reviewed: issue spec, static tests, validation evidence, ignored artifact state, dependency statuses
+Verification: static, focused, and full tests passed; durable eval and Browser/IAB evidence present
+Dependencies: hub-viewer-data-api and hub-viewer-kanban-ui completed
+Follow-ups: none required for read-only v1
+Risks / skipped checks: evals were not rerun by the review subagent to avoid report churn; orchestrator already ran them successfully
+Final outcome: PASS
+
+### Released claim (review-pass)
+Date: 2026-06-28T10:56:46.413065Z
+Claim ID: hub-viewer-smoke-tests-review-20260628
+Mode: review-pass
+Status: Completed
+Owner: codex-reviewer
+
+### Evidence correction
+Command correction: for skill in skills/*; do python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$skill"; done
+Result: passed, all 13 skills valid
+Reason: the earlier activity line was shell-expanded while being appended and rendered the variable as empty.

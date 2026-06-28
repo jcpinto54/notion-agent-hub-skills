@@ -1,6 +1,6 @@
 id: readonly-kanban-viewer
 title: "Build read-only Kanban hub viewer"
-status: Draft
+status: Archived
 priority: P1
 owner: codex
 issues:
@@ -10,4 +10,4 @@ issues:
 depends_on: []
 blocks: []
 created_at: 2026-06-27T18:13:36.670853Z
-updated_at: 2026-06-27T18:13:46.092294Z
+updated_at: 2026-06-28T10:58:04.114124Z
