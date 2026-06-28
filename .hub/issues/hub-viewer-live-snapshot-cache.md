@@ -1,10 +1,10 @@
 ---
 id: "hub-viewer-live-snapshot-cache"
 title: "Add live dashboard snapshot cache and revision metadata"
-status: "In Progress"
+status: "In Review"
 type: "Feature"
 priority: "P1"
-owner: "Codex"
+owner: "Unassigned"
 area: ""
 summary: ""
 blockers: ""
@@ -12,18 +12,12 @@ dependency_notes: ""
 change: "hub-viewer-live-updates"
 depends_on: []
 blocks: ["hub-viewer-live-serve-api", "hub-viewer-live-regression-docs"]
-claim:
-  id: "work-97bae0e5-eaac-4efc-9759-0564a91dca50"
-  purpose: "work"
-  owner: "Codex"
-  claimed_at: "2026-06-28T22:05:07.687083Z"
-  expires_at: "2026-06-29T00:05:07.687083Z"
-  machine: "Joaos-MacBook-Pro.local"
+claim: {}
 base_branch: "codex/agent-hub-v3-repo-native"
 branch: "codex/hub-viewer-live-snapshot-cache"
 worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills-hub-viewer-live-snapshot-cache"
-commit_sha: ""
-pr_url: ""
+commit_sha: "0003f87c3d2c88517e10316397a086d96c70ff87"
+pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/2"
 related_links: ""
 notion_url: ""
 ---
@@ -109,3 +103,19 @@ Evidence: tests/test_file_hub_backend.py; skills/manage-agent-hub-issues/lib/fil
 Verification: python3 -m unittest tests.test_file_hub_backend.FileHubBackendTests.test_dashboard_live_state_recomputes_after_issue_file_change_without_writes -> OK; python3 -m unittest tests.test_file_hub_backend -> OK; python3 -m unittest tests.test_agent_hub_v3 -> OK.
 Risks / skipped checks: No HTTP/server/client surface touched. Packet files were copied into the isolated worktree because the claimed issue existed only as untracked caller-worktree Hub metadata.
 Next step: Run final combined verification, commit, push, open PR, submit issue to review, and release the claim.
+
+### Status change: In Progress -> In Review
+Date: 2026-06-28T22:11:20.580699Z
+Agent: Codex
+Summary: Implemented live dashboard snapshot cache and revision metadata for backend file hubs.
+Evidence: Commit: 0003f87c3d2c88517e10316397a086d96c70ff87; PR: https://github.com/jcpinto54/notion-agent-hub-skills/pull/2; files: skills/manage-agent-hub-issues/lib/file_hub_common.py, tests/test_file_hub_backend.py, .hub/issues/hub-viewer-live-snapshot-cache.md, .hub/changes/hub-viewer-live-updates/.
+Verification: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 -> OK (24 tests).
+Risks / skipped checks: No server/client/API surface included by design. Live helper returns dashboard schema v3 payload with added revision metadata; dashboard export remains unchanged.
+Next step: Reviewer should verify cache invalidation on .hub source changes and read-only invariants for state, reports, and viewer hub-state files.
+
+### Released claim (submitted)
+Date: 2026-06-28T22:11:20.631335Z
+Claim ID: work-97bae0e5-eaac-4efc-9759-0564a91dca50
+Mode: submitted
+Status: In Review
+Owner: Unassigned
