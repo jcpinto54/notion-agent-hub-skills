@@ -381,6 +381,77 @@ None.
         review_codes = {item["code"] for item in cards["review-card"]["diagnostics"]}
         self.assertIn("review_ready_missing_commit", review_codes)
 
+    def test_dashboard_live_state_recomputes_after_issue_file_change_without_writes(self):
+        temp, root, hub = self.make_repo()
+        self.addCleanup(temp.cleanup)
+        file_hub.create_change_packet(hub, "viewer-change", "Viewer Change")
+
+        issue = file_hub.create_issue_file(
+            hub,
+            "Ready Card",
+            "ready-card",
+            change="viewer-change",
+        )
+        file_hub.link_issue_to_change(hub, "viewer-change", issue.id)
+        self.set_agent_ready_body(issue)
+
+        state_path = hub / "state.yml"
+        report_path = hub / "reports/latest-analysis.json"
+        viewer_state_path = root / "skills/list-agent-hub-issues/viewer/hub-state.json"
+        state_path.write_text("sentinel: state\n", encoding="utf-8")
+        report_path.write_text('{"sentinel": "report"}\n', encoding="utf-8")
+        viewer_state_path.parent.mkdir(parents=True, exist_ok=True)
+        viewer_state_path.write_text('{"sentinel": "viewer"}\n', encoding="utf-8")
+
+        protected_paths = [state_path, report_path, viewer_state_path]
+        protected_before = {
+            path: (path.read_text(encoding="utf-8"), path.stat().st_mtime_ns)
+            for path in protected_paths
+        }
+        reports_before = sorted(
+            path.relative_to(hub).as_posix()
+            for path in (hub / "reports").rglob("*")
+        )
+
+        live_cache = getattr(file_hub, "DashboardLiveSnapshotCache", None)
+        self.assertTrue(callable(live_cache), "DashboardLiveSnapshotCache helper is required.")
+        cache = live_cache()
+        first = cache.get(hub, change="viewer-change")
+        second = cache.get(hub, change="viewer-change")
+
+        self.assertEqual(first, second)
+        self.assertEqual(first["version"], "3")
+        self.assertEqual(first["change"], "viewer-change")
+        self.assertIn("revision", first)
+        self.assertRegex(first["revision"]["id"], r"^[a-f0-9]{64}$")
+        self.assertEqual(first["revision"]["etag"], f'"{first["revision"]["id"]}"')
+        self.assertEqual(first["summary"]["issue_count"], 1)
+        first_revision = first["revision"]["id"]
+        first_generated_at = first["generated_at"]
+
+        updated = file_hub.issue_by_id(hub, "ready-card")
+        updated.status = "Completed"
+        updated.write()
+        after_change = cache.get(hub, change="viewer-change")
+
+        self.assertNotEqual(after_change["revision"]["id"], first_revision)
+        self.assertNotEqual(after_change["generated_at"], first_generated_at)
+        cards_by_column = {
+            column["title"]: [card["id"] for card in column["issues"]]
+            for column in after_change["columns"]
+        }
+        self.assertEqual(cards_by_column["Ready"], [])
+        self.assertEqual(cards_by_column["Completed"], ["ready-card"])
+
+        for path, (content, mtime_ns) in protected_before.items():
+            self.assertEqual(path.read_text(encoding="utf-8"), content)
+            self.assertEqual(path.stat().st_mtime_ns, mtime_ns)
+        reports_after = sorted(
+            path.relative_to(hub).as_posix()
+            for path in (hub / "reports").rglob("*")
+        )
+        self.assertEqual(reports_after, reports_before)
+
     def test_list_and_claim_scripts_auto_detect_file_backend(self):
         temp, root, hub = self.make_repo()
         self.addCleanup(temp.cleanup)
