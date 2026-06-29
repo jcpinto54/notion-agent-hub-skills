@@ -1,0 +1,14 @@
+id: hub-viewer-live-updates
+title: "Make Agent Hub viewer live-updating"
+status: Draft
+priority: P1
+owner: codex
+issues:
+  - hub-viewer-live-snapshot-cache
+  - hub-viewer-live-serve-api
+  - hub-viewer-live-client
+  - hub-viewer-live-regression-docs
+depends_on: []
+blocks: []
+created_at: 2026-06-28T13:14:34.590823Z
+updated_at: 2026-06-28T13:14:35.164241Z

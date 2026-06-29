@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import re
 import socket
@@ -1740,6 +1742,96 @@ def dashboard_snapshot(hub_path: Path, change: str = "") -> dict[str, Any]:
             },
         },
     }
+
+
+def dashboard_source_paths(hub_path: Path) -> list[Path]:
+    paths: list[Path] = []
+    config_path = hub_path / CONFIG_NAME
+    if config_path.exists():
+        paths.append(config_path)
+
+    issues_dir = hub_path / ISSUES_DIR
+    if issues_dir.exists():
+        paths.extend(path for path in issues_dir.glob("*.md") if path.is_file())
+
+    changes_dir = hub_path / CHANGES_DIR
+    if changes_dir.exists():
+        paths.extend(path for path in changes_dir.rglob("*") if path.is_file())
+
+    claims_path = hub_path / RUNTIME_DIR / CLAIMS_NAME
+    if claims_path.exists():
+        paths.append(claims_path)
+
+    return sorted(paths, key=lambda path: relative_hub_target(hub_path, path))
+
+
+def dashboard_source_fingerprint(hub_path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"agent-hub-dashboard-source-v1\0")
+    for path in dashboard_source_paths(hub_path):
+        try:
+            content = path.read_bytes()
+        except FileNotFoundError:
+            continue
+        digest.update(relative_hub_target(hub_path, path).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(len(content)).encode("ascii"))
+        digest.update(b"\0")
+        digest.update(content)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def dashboard_live_revision(source_fingerprint: str, change: str = "") -> str:
+    digest = hashlib.sha256()
+    digest.update(b"agent-hub-dashboard-live-revision-v1\0")
+    digest.update(change.encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(source_fingerprint.encode("ascii"))
+    return digest.hexdigest()
+
+
+def dashboard_live_snapshot(
+    hub_path: Path, change: str = "", source_fingerprint: str | None = None
+) -> dict[str, Any]:
+    change_filter = validate_change_slug(change) if change else ""
+    fingerprint = source_fingerprint or dashboard_source_fingerprint(hub_path)
+    revision_id = dashboard_live_revision(fingerprint, change_filter)
+    snapshot = dashboard_snapshot(hub_path, change=change_filter)
+    snapshot["revision"] = {
+        "id": revision_id,
+        "etag": f'"{revision_id}"',
+        "source_fingerprint": fingerprint,
+        "source": "file",
+        "change": change_filter,
+    }
+    return snapshot
+
+
+@dataclass
+class DashboardLiveSnapshotCache:
+    entries: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def get(self, hub_path: Path, change: str = "") -> dict[str, Any]:
+        hub_path = hub_path.expanduser().resolve()
+        change_filter = validate_change_slug(change) if change else ""
+        fingerprint = dashboard_source_fingerprint(hub_path)
+        revision_id = dashboard_live_revision(fingerprint, change_filter)
+        cache_key = f"{hub_path}\0{change_filter}"
+        cached = self.entries.get(cache_key)
+        if cached and cached.get("revision_id") == revision_id:
+            return copy.deepcopy(cached["snapshot"])
+
+        snapshot = dashboard_live_snapshot(
+            hub_path,
+            change=change_filter,
+            source_fingerprint=fingerprint,
+        )
+        self.entries[cache_key] = {
+            "revision_id": revision_id,
+            "snapshot": copy.deepcopy(snapshot),
+        }
+        return snapshot
 
 
 def extract_task_issue_ids(tasks_text: str) -> list[str]:
