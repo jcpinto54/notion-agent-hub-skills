@@ -1,10 +1,10 @@
 ---
 id: "agent-hub-sync-merged-prs"
 title: "Sync merged GitHub PRs into Agent Hub issue completion"
-status: "In Progress"
+status: "In Review"
 type: "Feature"
 priority: "P1"
-owner: "Codex"
+owner: "Unassigned"
 area: ""
 summary: ""
 blockers: ""
@@ -12,18 +12,12 @@ dependency_notes: ""
 change: ""
 depends_on: []
 blocks: []
-claim:
-  id: "codex-sync-merged-prs-20260703"
-  purpose: "work"
-  owner: "Codex"
-  claimed_at: "2026-07-03T16:18:55.843290Z"
-  expires_at: "2026-07-03T18:18:55.843290Z"
-  machine: "Joaos-MacBook-Pro.local"
+claim: {}
 base_branch: "codex/agent-hub-v3-repo-native"
 branch: "codex/agent-hub-sync-merged-prs"
 worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills-agent-hub-sync-merged-prs"
-commit_sha: ""
-pr_url: ""
+commit_sha: "3e8501d35b4b562b728b2a04d02703b57e04dc51"
+pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/4"
 related_links: ""
 notion_url: ""
 ---
@@ -156,3 +150,10 @@ Touched: skills/manage-agent-hub-issues/lib/file_hub_common.py; skills/manage-ag
 Verification: python3 -m unittest tests.test_agent_hub_v3 tests.test_file_hub_backend passed; python3 -m unittest discover -s tests passed; python3 skills/manage-agent-hub-issues/scripts/agent_hub.py state sync-merged-prs --change agent-hub-sync-merged-prs returned ok with no completions.
 Risks: Live GitHub API behavior depends on gh, GITHUB_TOKEN, or GH_TOKEN credentials; covered through provider injection and safe diagnostics, not live network fixtures.
 Next step: commit, push, open PR, then submit this issue to review.
+
+### Released claim (submitted)
+Date: 2026-07-03T16:30:17.975689Z
+Claim ID: codex-sync-merged-prs-20260703
+Mode: submitted
+Status: In Review
+Owner: Unassigned
