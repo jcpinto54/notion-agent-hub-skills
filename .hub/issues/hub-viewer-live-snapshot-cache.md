@@ -1,7 +1,7 @@
 ---
 id: "hub-viewer-live-snapshot-cache"
 title: "Add live dashboard snapshot cache and revision metadata"
-status: "In Review"
+status: "Completed"
 type: "Feature"
 priority: "P1"
 owner: "Unassigned"
@@ -119,3 +119,9 @@ Claim ID: work-97bae0e5-eaac-4efc-9759-0564a91dca50
 Mode: submitted
 Status: In Review
 Owner: Unassigned
+
+### Status changed to Completed
+Date: 2026-07-03T16:00:55.810230Z
+Agent: Codex
+Previous status: In Review
+Reason: PR #2 was merged and completion evidence is recorded; update stale dependency metadata so dependent review workflow can proceed.
