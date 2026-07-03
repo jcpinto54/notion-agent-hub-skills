@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Agent Hub Loop"
+  short_description: "Run packet-scoped agent loops"
+  default_prompt: "Use $run-agent-hub-loop to run agents on one Agent Hub change packet until blocked or budget exhausted."
