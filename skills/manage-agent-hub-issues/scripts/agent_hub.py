@@ -5,9 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
 import sys
+import time
 from pathlib import Path
 from typing import Any
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote, urlparse
 
 COMMON_LIB = Path(__file__).resolve().parents[1] / "lib"
 sys.path.insert(0, str(COMMON_LIB))
@@ -93,6 +98,11 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard_export = dashboard_sub.add_parser("export")
     dashboard_export.add_argument("--change", default="")
     dashboard_export.add_argument("--output", type=Path)
+    dashboard_serve = dashboard_sub.add_parser("serve")
+    dashboard_serve.add_argument("--change", default="")
+    dashboard_serve.add_argument("--host", default="127.0.0.1")
+    dashboard_serve.add_argument("--port", type=int, default=8765)
+    dashboard_serve.add_argument("--poll-interval", type=float, default=0.5)
 
     claim = commands.add_parser("claim", help="Claim operations.")
     claim_sub = claim.add_subparsers(dest="claim_command", required=True)
@@ -204,6 +214,18 @@ def run(args: argparse.Namespace) -> Any:
             return {"ok": True, "output": str(output_path), "summary": snapshot["summary"]}
         return snapshot
 
+    if args.command == "dashboard" and args.dashboard_command == "serve":
+        viewer_dir = Path(__file__).resolve().parents[2] / "list-agent-hub-issues" / "viewer"
+        serve_dashboard(
+            hub=hub,
+            viewer_dir=viewer_dir,
+            host=args.host,
+            port=args.port,
+            change=args.change,
+            poll_interval=args.poll_interval,
+        )
+        return {"ok": True}
+
     if args.command == "claim":
         issue = file_hub.issue_by_id(hub, args.issue)
         if args.claim_command == "acquire":
@@ -261,6 +283,169 @@ def run(args: argparse.Namespace) -> Any:
         )
 
     raise RuntimeError("Unsupported command.")
+
+
+def serve_dashboard(
+    *,
+    hub: Path,
+    viewer_dir: Path,
+    host: str,
+    port: int,
+    change: str,
+    poll_interval: float,
+) -> None:
+    cache = file_hub.DashboardLiveSnapshotCache()
+    safe_poll_interval = max(poll_interval, 0.05)
+
+    class DashboardRequestHandler(BaseHTTPRequestHandler):
+        server_version = "AgentHubDashboard/1"
+
+        def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib signature.
+            return
+
+        def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            parsed = urlparse(self.path)
+            if parsed.path == "/healthz":
+                self.send_bytes(b"ok\n", content_type="text/plain; charset=utf-8", no_store=True)
+                return
+            if parsed.path == "/api/state":
+                snapshot = cache.get(hub, change=change)
+                self.send_json(snapshot)
+                return
+            if parsed.path == "/api/events":
+                self.stream_events()
+                return
+            self.serve_static(parsed.path)
+
+        def do_HEAD(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            parsed = urlparse(self.path)
+            if parsed.path == "/healthz":
+                self.send_headers(HTTPStatus.OK, "text/plain; charset=utf-8", 0, no_store=True)
+                return
+            if parsed.path == "/api/state":
+                snapshot = cache.get(hub, change=change)
+                payload = json.dumps(snapshot, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+                self.send_headers(
+                    HTTPStatus.OK,
+                    "application/json; charset=utf-8",
+                    len(payload),
+                    no_store=True,
+                    etag=str(snapshot.get("revision", {}).get("etag") or ""),
+                )
+                return
+            self.serve_static(parsed.path, send_body=False)
+
+        def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            self.reject_mutation()
+
+        def do_PUT(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            self.reject_mutation()
+
+        def do_PATCH(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            self.reject_mutation()
+
+        def do_DELETE(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            self.reject_mutation()
+
+        def reject_mutation(self) -> None:
+            self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
+            self.send_header("Allow", "GET, HEAD")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def send_json(self, payload: dict[str, Any]) -> None:
+            body = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+            etag = str(payload.get("revision", {}).get("etag") or "")
+            self.send_headers(
+                HTTPStatus.OK,
+                "application/json; charset=utf-8",
+                len(body),
+                no_store=True,
+                etag=etag,
+            )
+            self.wfile.write(body)
+
+        def send_bytes(
+            self,
+            body: bytes,
+            *,
+            content_type: str,
+            no_store: bool = False,
+        ) -> None:
+            self.send_headers(HTTPStatus.OK, content_type, len(body), no_store=no_store)
+            self.wfile.write(body)
+
+        def send_headers(
+            self,
+            status: HTTPStatus,
+            content_type: str,
+            content_length: int,
+            *,
+            no_store: bool = False,
+            etag: str = "",
+        ) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(content_length))
+            if no_store:
+                self.send_header("Cache-Control", "no-store")
+            if etag:
+                self.send_header("ETag", etag)
+            self.end_headers()
+
+        def serve_static(self, request_path: str, *, send_body: bool = True) -> None:
+            relative = unquote(request_path).lstrip("/") or "index.html"
+            static_path = (viewer_dir / relative).resolve()
+            try:
+                static_path.relative_to(viewer_dir.resolve())
+            except ValueError:
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            if static_path.is_dir():
+                static_path = static_path / "index.html"
+            if not static_path.is_file():
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+
+            body = static_path.read_bytes() if send_body else b""
+            content_type = mimetypes.guess_type(static_path.name)[0] or "application/octet-stream"
+            content_length = len(body) if send_body else static_path.stat().st_size
+            self.send_headers(HTTPStatus.OK, content_type, content_length)
+            if send_body:
+                self.wfile.write(body)
+
+        def stream_events(self) -> None:
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+            last_revision = ""
+            while True:
+                snapshot = cache.get(hub, change=change)
+                revision = str(snapshot.get("revision", {}).get("id") or "")
+                if revision != last_revision:
+                    notification = {
+                        "change": snapshot.get("change", ""),
+                        "generated_at": snapshot.get("generated_at", ""),
+                        "revision": snapshot.get("revision", {}),
+                        "summary": snapshot.get("summary", {}),
+                    }
+                    payload = json.dumps(notification, sort_keys=True)
+                    try:
+                        self.wfile.write(f"event: revision\ndata: {payload}\n\n".encode("utf-8"))
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
+                    last_revision = revision
+                time.sleep(safe_poll_interval)
+
+    httpd = ThreadingHTTPServer((host, port), DashboardRequestHandler)
+    try:
+        httpd.serve_forever()
+    finally:
+        httpd.server_close()
 
 
 def main(argv: list[str] | None = None) -> int:
