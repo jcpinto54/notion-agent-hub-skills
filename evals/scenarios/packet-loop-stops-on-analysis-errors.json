@@ -1,0 +1,24 @@
+{
+  "id": "packet-loop-stops-on-analysis-errors",
+  "title": "Packet loop stops on analyze errors",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Run the packet loop when analyze reports errors.",
+  "expected": {
+    "required_phrases": [
+      "run `analyze change <slug>`. stop on error diagnostics",
+      "stop on blocking errors",
+      "audit`/`analyze` reports blocking errors"
+    ]
+  },
+  "must_not": [
+    "ignore_analyze_errors",
+    "spawn_after_blocking_errors"
+  ],
+  "rubric": [
+    {
+      "id": "stops_on_analysis_errors",
+      "requirement": "Packet loop policy stops before spawning work when analyze or audit reports blocking errors."
+    }
+  ]
+}

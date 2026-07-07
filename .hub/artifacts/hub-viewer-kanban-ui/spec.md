@@ -29,7 +29,7 @@ context scannable.
 - Do not add write controls, status mutation, issue creation, claim actions, or
   browser-side `.hub` parsing.
 - Do not add Node, Vite, React, shadcn, package managers, or external CDNs.
-- Do not implement authentication, remote hosting, Notion sync, or live reload.
+- Do not implement authentication, remote hosting, external sync, or live reload.
 - Do not persist filters or create user-specific settings.
 
 ## Done Criteria

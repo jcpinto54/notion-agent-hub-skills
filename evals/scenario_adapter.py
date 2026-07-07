@@ -17,6 +17,9 @@ POLICY_FILES = [
     "skills/create-agent-hub-issue/SKILL.md",
     "skills/review-agent-hub-issue/SKILL.md",
     "skills/update-agent-hub-issue/SKILL.md",
+    "skills/list-agent-hub-issues/SKILL.md",
+    "skills/iterate-agent-hub-work/SKILL.md",
+    "skills/run-agent-hub-loop/SKILL.md",
 ]
 
 
@@ -179,6 +182,17 @@ def evaluate_scenario(
             "kind": kind,
             "handoff_type": expected.get("handoff_type"),
             "covered": requirements,
+            "checked_files": POLICY_FILES,
+            "missing_requirements": missing,
+        }
+
+    if kind == "policy_text":
+        corpus = _policy_corpus(repo_root)
+        requirements = [str(item) for item in expected.get("required_phrases", [])]
+        passed, missing = _contains_all(corpus, requirements)
+        return {
+            "passed": passed,
+            "kind": kind,
             "checked_files": POLICY_FILES,
             "missing_requirements": missing,
         }

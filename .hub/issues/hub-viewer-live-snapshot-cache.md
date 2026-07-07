@@ -1,7 +1,7 @@
 ---
 id: "hub-viewer-live-snapshot-cache"
 title: "Add live dashboard snapshot cache and revision metadata"
-status: "In Review"
+status: "Completed"
 type: "Feature"
 priority: "P1"
 owner: "Unassigned"
@@ -15,11 +15,11 @@ blocks: ["hub-viewer-live-serve-api", "hub-viewer-live-regression-docs"]
 claim: {}
 base_branch: "codex/agent-hub-v3-repo-native"
 branch: "codex/hub-viewer-live-snapshot-cache"
-worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills-hub-viewer-live-snapshot-cache"
+worktree_path: "/Users/jcpinto/git/agent-hub-skills-hub-viewer-live-snapshot-cache"
 commit_sha: "0003f87c3d2c88517e10316397a086d96c70ff87"
-pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/2"
+pr_url: "https://github.com/jcpinto54/agent-hub-skills/pull/2"
 related_links: ""
-notion_url: ""
+external_url: ""
 ---
 ## Context
 
@@ -93,7 +93,7 @@ Date: 2026-06-28T22:05:07.687083Z
 Agent: Codex
 Claim ID: work-97bae0e5-eaac-4efc-9759-0564a91dca50
 Branch: codex/hub-viewer-live-snapshot-cache
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills-hub-viewer-live-snapshot-cache
+Worktree Path: /Users/jcpinto/git/agent-hub-skills-hub-viewer-live-snapshot-cache
 
 ### Progress
 Date: 2026-06-28T22:09:40.762222Z
@@ -108,7 +108,7 @@ Next step: Run final combined verification, commit, push, open PR, submit issue 
 Date: 2026-06-28T22:11:20.580699Z
 Agent: Codex
 Summary: Implemented live dashboard snapshot cache and revision metadata for backend file hubs.
-Evidence: Commit: 0003f87c3d2c88517e10316397a086d96c70ff87; PR: https://github.com/jcpinto54/notion-agent-hub-skills/pull/2; files: skills/manage-agent-hub-issues/lib/file_hub_common.py, tests/test_file_hub_backend.py, .hub/issues/hub-viewer-live-snapshot-cache.md, .hub/changes/hub-viewer-live-updates/.
+Evidence: Commit: 0003f87c3d2c88517e10316397a086d96c70ff87; PR: https://github.com/jcpinto54/agent-hub-skills/pull/2; files: skills/manage-agent-hub-issues/lib/file_hub_common.py, tests/test_file_hub_backend.py, .hub/issues/hub-viewer-live-snapshot-cache.md, .hub/changes/hub-viewer-live-updates/.
 Verification: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 -> OK (24 tests).
 Risks / skipped checks: No server/client/API surface included by design. Live helper returns dashboard schema v3 payload with added revision metadata; dashboard export remains unchanged.
 Next step: Reviewer should verify cache invalidation on .hub source changes and read-only invariants for state, reports, and viewer hub-state files.
@@ -119,3 +119,15 @@ Claim ID: work-97bae0e5-eaac-4efc-9759-0564a91dca50
 Mode: submitted
 Status: In Review
 Owner: Unassigned
+
+### Merged PR verification
+Command: git show -s --format=%H%n%s%n%b HEAD
+Result: 1de68a0d502fb8c48b55ec7dfb4af493b915d158; Merge pull request #2 from jcpinto54/codex/hub-viewer-live-snapshot-cache; [codex] Add live dashboard snapshot cache.
+Command: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3
+Result: OK, 25 tests passed.
+
+### Status changed to Completed
+Date: 2026-06-29T08:06:46.482199Z
+Agent: Codex
+Previous status: In Review
+Reason: PR #2 is merged into codex/agent-hub-v3-repo-native and final verification evidence is recorded.

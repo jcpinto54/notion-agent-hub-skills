@@ -1,15 +1,15 @@
 ---
 name: create-agent-hub-issue
-description: Create repo-native `.hub` Agent Hub issues or legacy Notion issues, follow-ups, decisions, open questions, and handoffs. Use when a user asks to add, file, create, record, split, or sequence durable work items in an Agent Hub.
+description: Create repo-native `.hub` Agent Hub issues, follow-ups, decisions, open questions, and handoffs. Use when a user asks to add, file, create, record, split, or sequence durable work items in an Agent Hub.
 ---
 
 # Create Agent Hub Issue
 
-For repo work, `.hub/issues/<issue-id>.md` is the canonical durable record. Use deterministic commands for repo-native writes. Use Notion MCP only for legacy hubs or optional mirror pages.
+For repo work, `.hub/issues/<issue-id>.md` is the canonical durable record. Use deterministic commands for repo-native writes.
 
 ## Workflow
 
-1. If `.hub/config.yml` exists, use the v3 CLI or a compatibility script. Otherwise use the configured legacy Notion `Issues / Activities` data source.
+1. Use the v3 CLI or a compatibility script.
 2. Draft durable content with context, scope, out of scope, observable done criteria, verification strategy, dependencies, and first next step.
 3. Set obvious dependencies through deterministic dependency commands when ordering is clear.
 4. Create the item and fetch/read it back to verify metadata and body.

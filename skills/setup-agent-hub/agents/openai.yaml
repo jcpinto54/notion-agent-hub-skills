@@ -1,4 +1,0 @@
-interface:
-  display_name: "Setup Agent Hub"
-  short_description: "Configure Agent Hub Notion token and default data source"
-  default_prompt: "Use $setup-agent-hub to configure my Agent Hub Notion token and default hub data source."

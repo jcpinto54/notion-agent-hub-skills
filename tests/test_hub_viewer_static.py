@@ -26,6 +26,14 @@ class HubViewerStaticTests(unittest.TestCase):
             self.assertNotIn(external_marker, html)
             self.assertNotIn(external_marker, script)
 
+    def test_viewer_prefers_live_state_api_with_static_fallback(self):
+        script = (VIEWER_DIR / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("/api/state", script)
+        self.assertIn("/api/events", script)
+        self.assertIn("EventSource", script)
+        self.assertIn("./hub-state.json", script)
+
     def test_sample_state_matches_dashboard_contract(self):
         payload = json.loads((VIEWER_DIR / "hub-state.sample.json").read_text(encoding="utf-8"))
 

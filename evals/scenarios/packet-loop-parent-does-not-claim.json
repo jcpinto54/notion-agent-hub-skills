@@ -1,0 +1,23 @@
+{
+  "id": "packet-loop-parent-does-not-claim",
+  "title": "Packet loop parent does not claim or implement",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Operate this change packet as the parent orchestrator.",
+  "expected": {
+    "required_phrases": [
+      "parent agent is the orchestrator only",
+      "the parent never claims, implements, reviews its own work, or bypasses readiness"
+    ]
+  },
+  "must_not": [
+    "parent_claims_issue",
+    "parent_implements_issue"
+  ],
+  "rubric": [
+    {
+      "id": "parent_stays_orchestrator",
+      "requirement": "Packet loop policy keeps the parent as orchestrator only."
+    }
+  ]
+}

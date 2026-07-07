@@ -23,7 +23,7 @@ layout.
   repository in this issue.
 - Do not commit generated `hub-state.json`, screenshots, traces, or server logs.
 - Do not test mutable dashboard operations because the first viewer is read-only.
-- Do not require Notion, Jira, or network services for smoke coverage.
+- Do not require external services, Jira, or network services for smoke coverage.
 
 ## Done Criteria
 

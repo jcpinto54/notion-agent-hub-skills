@@ -1,11 +1,16 @@
 ---
 name: iterate-agent-hub-work
-description: Orchestrate one Agent Hub work iteration by listing ready issues with list-agent-hub-issues, spawning up to 10 subagents, and returning their agent IDs without waiting for completion.
+description: Orchestrate one single Agent Hub work iteration by listing ready issues with list-agent-hub-issues, spawning up to 10 subagents, and returning their agent IDs without waiting for completion. Use run-agent-hub-loop instead when the user asks to keep operating on a change packet until blocked, complete, or budget exhausted.
 ---
 
 # Iterate Agent Hub Work
 
-Use this skill to start one bounded Agent Hub iteration. This skill is orchestration-only: it does not define readiness, claim, review, stale-claim, or completion policy.
+Use this skill to start one bounded Agent Hub iteration. This is a one-wave
+primitive: it lists ready work, spawns subagents, and returns their IDs without
+waiting for completion.
+
+Use `run-agent-hub-loop` when the user asks to keep running a packet, operate
+until blocked, include automatic review, or respect wave/time budgets.
 
 ## Canonical Responsibilities
 
@@ -17,12 +22,24 @@ Use this skill to start one bounded Agent Hub iteration. This skill is orchestra
 
 ## Workflow
 
-1. Ensure Agent Hub setup exists. If not, use `setup-agent-hub`.
+1. Ensure Agent Hub setup exists. If not, use `init-agent-hub`.
 2. Confirm that work entering this iteration has already passed `spec-agent-hub-issue` or is otherwise clearly scoped with observable done criteria. If an issue is vague, too broad, or missing verification steps, do not reinterpret it here; run `spec-agent-hub-issue` first.
 3. Run the canonical ready-issue listing, capped at 10:
 
 ```bash
 python3 ~/.codex/skills/list-agent-hub-issues/scripts/agent_hub_list.py \
+  --readiness Ready \
+  --format json \
+  --limit 10
+```
+
+For a packet-scoped one-wave iteration, pass the change filter through the
+listing command:
+
+```bash
+python3 ~/.codex/skills/list-agent-hub-issues/scripts/agent_hub_list.py \
+  --backend file \
+  --change '<change-slug>' \
   --readiness Ready \
   --format json \
   --limit 10

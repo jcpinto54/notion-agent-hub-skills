@@ -15,11 +15,11 @@ blocks: []
 claim: {}
 base_branch: "main"
 branch: "codex/agent-hub-v3-repo-native"
-worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
+worktree_path: "/Users/jcpinto/git/agent-hub-skills"
 commit_sha: "b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9"
-pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/1"
+pr_url: "https://github.com/jcpinto54/agent-hub-skills/pull/1"
 related_links: ""
-notion_url: ""
+external_url: ""
 ---
 ## Context
 
@@ -44,7 +44,7 @@ layout.
   repository in this issue.
 - Do not commit generated `hub-state.json`, screenshots, traces, or server logs.
 - Do not test mutable dashboard operations because the first viewer is read-only.
-- Do not require Notion, Jira, or network services for smoke coverage.
+- Do not require external services, Jira, or network services for smoke coverage.
 
 ## Done Criteria
 
@@ -118,7 +118,7 @@ Date: 2026-06-28T10:54:00.832493Z
 Agent: codex-orchestrator
 Claim ID: hub-viewer-smoke-tests-work-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Regression and browser smoke verification
 Command: python3 -m unittest discover -s tests
@@ -138,7 +138,7 @@ Agent: codex-orchestrator
 Implemented: static regression tests plus full unit/eval/skill/browser verification evidence for read-only viewer.
 Touched: tests/test_hub_viewer_static.py plus validation reports generated outside tracked source.
 Checks run: unit discovery; evals; skill metadata validation; diff check; Browser/IAB desktop/mobile smoke.
-Artifacts: PR https://github.com/jcpinto54/notion-agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9; screenshots /tmp/agent-hub-viewer-desktop.png and /tmp/agent-hub-viewer-mobile.png.
+Artifacts: PR https://github.com/jcpinto54/agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9; screenshots /tmp/agent-hub-viewer-desktop.png and /tmp/agent-hub-viewer-mobile.png.
 Risks / skipped checks: no committed Playwright suite; Browser/IAB smoke is durable issue evidence only.
 Reviewer should verify: validation evidence covers unit, eval, skill metadata, browser desktop/mobile, and no generated artifacts are committed.
 
@@ -154,7 +154,7 @@ Date: 2026-06-28T10:56:46.184619Z
 Agent: codex-reviewer
 Claim ID: hub-viewer-smoke-tests-review-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Review verification
 Command: python3 -m unittest tests.test_hub_viewer_static

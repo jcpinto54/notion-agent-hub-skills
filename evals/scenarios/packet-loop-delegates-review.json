@@ -1,0 +1,24 @@
+{
+  "id": "packet-loop-delegates-review",
+  "title": "Packet loop delegates independent review work",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Run a packet loop with automatic review.",
+  "expected": {
+    "required_phrases": [
+      "review agents claim review and make completion/send-back decisions",
+      "never review your own implementation work",
+      "spawn one independent review subagent per row"
+    ]
+  },
+  "must_not": [
+    "same_agent_reviews_own_work",
+    "review_without_claim"
+  ],
+  "rubric": [
+    {
+      "id": "delegates_review",
+      "requirement": "Packet loop policy delegates review to independent review subagents."
+    }
+  ]
+}

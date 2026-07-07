@@ -1,8 +1,8 @@
 {
   "diagnostics": [],
+  "issue": "hub-viewer-board-detail-footer",
   "summary": {
-    "diagnostic_count": 0,
-    "issue_count": 3
+    "diagnostic_count": 0
   },
   "version": "3"
 }

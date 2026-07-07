@@ -15,17 +15,17 @@ blocks: ["hub-viewer-kanban-ui"]
 claim: {}
 base_branch: "main"
 branch: "codex/agent-hub-v3-repo-native"
-worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
+worktree_path: "/Users/jcpinto/git/agent-hub-skills"
 commit_sha: "b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9"
-pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/1"
+pr_url: "https://github.com/jcpinto54/agent-hub-skills/pull/1"
 related_links: ""
-notion_url: ""
+external_url: ""
 ---
 ## Context
 
 Agent Hub needs a read-only dashboard data contract so a visual Kanban viewer can
 render repo-native `.hub` state without parsing Markdown in the browser or
-calling Notion. The contract should be deterministic, stable under tests, and
+calling external services. The contract should be deterministic, stable under tests, and
 safe to export without refreshing state or writing audit reports.
 
 ## Scope
@@ -46,7 +46,7 @@ safe to export without refreshing state or writing audit reports.
 - Do not add mutable dashboard operations.
 - Do not implement the visual web UI in this issue.
 - Do not parse issue Markdown in browser code.
-- Do not add Notion sync, authentication, package managers, or external
+- Do not add external sync, authentication, package managers, or external
   dashboard dependencies.
 
 ## Done Criteria
@@ -121,7 +121,7 @@ Date: 2026-06-28T10:43:23.793502Z
 Agent: codex-orchestrator
 Claim ID: hub-viewer-data-api-work-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Regression-first backend implementation
 First failing result: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3 initially failed for missing set_issue_spec, missing dashboard_snapshot, and missing issue set-spec CLI command.
@@ -135,7 +135,7 @@ Agent: codex-orchestrator
 Implemented: deterministic set-spec command and dashboard export snapshot contract.
 Touched: skills/manage-agent-hub-issues/lib/file_hub_common.py; skills/manage-agent-hub-issues/scripts/agent_hub.py; tests/test_file_hub_backend.py; tests/test_agent_hub_v3.py; README.md.
 Checks run: python3 -m unittest discover -s tests; python3 evals/run_evals.py; skill metadata validation; git diff --check.
-Artifacts: PR https://github.com/jcpinto54/notion-agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9.
+Artifacts: PR https://github.com/jcpinto54/agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9.
 Risks / skipped checks: none for backend data contract; browser QA belongs to dependent smoke issue.
 Reviewer should verify: schema fields, deterministic writes, read-only export, and tests.
 
@@ -151,7 +151,7 @@ Date: 2026-06-28T10:49:54.908351Z
 Agent: codex-reviewer
 Claim ID: hub-viewer-data-api-review-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Review verification
 Command: python3 -m unittest tests.test_file_hub_backend tests.test_agent_hub_v3

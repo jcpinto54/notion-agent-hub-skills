@@ -1,11 +1,11 @@
 ---
 name: manage-agent-hub-issues
-description: Primary resolver and shared policy for Agent Hub v3 repo-native `.hub` orchestration, deterministic writes, subagent-first execution, TDD/regression-first implementation, and legacy Notion compatibility. Use when a user asks to initialize, create, plan, spec, classify, list, claim, update, release, submit, review, audit, analyze, iterate, delegate, or coordinate Agent Hub issues, or when the right specialized Agent Hub skill is unclear.
+description: Primary resolver and shared policy for Agent Hub v3 repo-native `.hub` orchestration, deterministic writes, subagent-first execution, and TDD/regression-first implementation. Use when a user asks to initialize, create, plan, spec, classify, list, claim, update, release, submit, review, audit, analyze, iterate, delegate, or coordinate Agent Hub issues, or when the right specialized Agent Hub skill is unclear.
 ---
 
 # Manage Agent Hub Issues
 
-Use this skill as the primary resolver. For repo work, `.hub/` in the target repository is the only durable source of truth. Use Notion only for legacy hubs or optional mirrors, and treat it as stale unless the local `.hub` record agrees.
+Use this skill as the primary resolver. For repo work, `.hub/` in the target repository is the only durable source of truth. Treat external notes as stale unless the local `.hub` record agrees.
 
 ## Hard Rules
 
@@ -28,7 +28,7 @@ Load only the relevant one-level reference:
 
 Use the specialized skill or reference that matches the action:
 
-- Initialize hub or legacy setup: `init-agent-hub`; for Notion credentials only, `setup-agent-hub`.
+- Initialize a repo-native hub: `init-agent-hub`.
 - Create issue, decision, open question, follow-up, handoff, change, or dependency link: `create-agent-hub-issue` plus `references/v3-workflows.md`.
 - Tighten vague or oversized work: `spec-agent-hub-issue`.
 - List or inspect ready work: `list-agent-hub-issues`; for health checks, audit commands.
@@ -37,3 +37,5 @@ Use the specialized skill or reference that matches the action:
 - Review `In Review` work: `review-agent-hub-issue`.
 - Audit/analyze workspace health or change consistency: `review-agent-hub-workspace` plus `references/v3-workflows.md`.
 - Start one subagent-first iteration: `iterate-agent-hub-work`.
+- Run a budget-capped change-packet loop until blocked, complete, or budget
+  exhausted: `run-agent-hub-loop`.

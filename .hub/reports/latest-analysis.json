@@ -1,9 +1,9 @@
 {
-  "change": "readonly-kanban-viewer",
+  "change": "hub-viewer-board-polish",
   "diagnostics": [],
   "summary": {
     "diagnostic_count": 0,
-    "listed_issue_count": 3
+    "listed_issue_count": 2
   },
   "version": "3"
 }

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,7 +11,11 @@ from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMON_LIB = ROOT / "skills/manage-agent-hub-issues/lib"
 LIST_PATH = ROOT / "skills/list-agent-hub-issues/scripts/agent_hub_list.py"
+sys.path.insert(0, str(COMMON_LIB))
+
+import file_hub_common as file_hub  # noqa: E402
 
 
 def load_module():
@@ -24,137 +30,131 @@ def load_module():
 list_mod = load_module()
 
 
-def rich_text(value: str):
-    return {"type": "rich_text", "rich_text": [{"plain_text": value}] if value else []}
-
-
-def select(value: str):
-    return {"type": "select", "select": {"name": value} if value else None}
-
-
-def date_prop(value: datetime | None):
-    return {
-        "type": "date",
-        "date": {"start": value.isoformat().replace("+00:00", "Z")} if value else None,
-    }
-
-
-def relation(*ids: str):
-    return {"type": "relation", "relation": [{"id": item} for item in ids]}
-
-
-def page(
-    page_id: str,
-    title: str,
-    status: str,
-    priority: str = "P2",
-    owner: str = "Unassigned",
-    blockers: str = "",
-    depends_on: tuple[str, ...] = (),
-    updated_at: str = "2026-06-01T00:00:00Z",
-    claim_id: str = "",
-    claim_expires_at: datetime | None = None,
-):
-    return {
-        "id": page_id,
-        "url": f"https://notion.so/{page_id.replace('-', '')}",
-        "last_edited_time": updated_at,
-        "properties": {
-            "Title": {"type": "title", "title": [{"plain_text": title}]},
-            "Status": select(status),
-            "Owner": rich_text(owner),
-            "Priority": select(priority),
-            "Type": select("Feature"),
-            "Area": rich_text("Core"),
-            "Summary": rich_text("summary"),
-            "Blockers": rich_text(blockers),
-            "Depends On": relation(*depends_on),
-            "Blocks": relation(),
-            "Dependency Notes": rich_text(""),
-            "Updated At": {"type": "last_edited_time", "last_edited_time": updated_at},
-            "Claim ID": rich_text(claim_id),
-            "Claim Expires At": date_prop(claim_expires_at),
-        },
-    }
-
-
 class AgentHubListTests(unittest.TestCase):
+    def make_repo(self):
+        temp = tempfile.TemporaryDirectory()
+        root = Path(temp.name)
+        (root / ".git").mkdir()
+        hub = file_hub.create_hub(root, "List Project")
+        self.addCleanup(temp.cleanup)
+        return hub
+
+    def file_args(self, hub: Path, **overrides):
+        defaults = {
+            "hub_root": hub,
+            "change": None,
+            "status": None,
+            "owner": None,
+            "priority": None,
+            "type": None,
+            "area": None,
+            "readiness": None,
+        }
+        defaults.update(overrides)
+        return SimpleNamespace(**defaults)
+
+    def issue(self, hub: Path, issue_id: str, title: str, **overrides):
+        issue = file_hub.create_issue_file(hub, title, issue_id)
+        for key, value in overrides.items():
+            setattr(issue, key, value)
+        issue.write()
+        return file_hub.issue_by_id(hub, issue_id)
+
     def test_grouping_priority_sorting_and_markdown_counts(self):
-        pages = [
-            page("a", "P2 old", "Not Started", "P2", updated_at="2026-06-01T00:00:00Z"),
-            page("b", "P0 newer", "Not Started", "P0", updated_at="2026-06-02T00:00:00Z"),
-            page("c", "Review", "In Review", "P1", updated_at="2026-06-03T00:00:00Z"),
-        ]
-        issues = [list_mod.Issue.from_page(item) for item in pages]
-        issues.sort(key=list_mod.issue_sort_key)
-        self.assertEqual([issue.title for issue in issues], ["P0 newer", "P2 old", "Review"])
-        by_id = {issue.id: issue for issue in issues}
-        args = SimpleNamespace(
-            status=None, owner=None, priority=None, type=None, area=None, readiness=None
-        )
-        rows = list_mod.apply_filters(issues, by_id, args)
+        hub = self.make_repo()
+        self.issue(hub, "p2-old", "P2 old", priority="P2")
+        self.issue(hub, "p0-newer", "P0 newer", priority="P0")
+        self.issue(hub, "review", "Review", status="In Review")
+
+        rows, by_id = list_mod.load_file_rows(self.file_args(hub))
         output = list_mod.markdown(rows, by_id, 30)
+
         self.assertIn("Not Started `2`", output)
         self.assertIn("In Review `1`", output)
         self.assertLess(output.index("P0 newer"), output.index("P2 old"))
 
     def test_readiness_uses_dependency_status_without_n_plus_one(self):
-        dep = page("dep", "Dependency", "Completed")
-        ready = page("ready", "Ready issue", "Not Started", depends_on=("dep",))
-        blocked_dep = page("blocked-dep", "Blocked dependency", "In Progress")
-        blocked = page("blocked", "Blocked issue", "Not Started", depends_on=("blocked-dep",))
-        issues = [list_mod.Issue.from_page(item) for item in [dep, ready, blocked_dep, blocked]]
+        hub = self.make_repo()
+        dep = self.issue(hub, "dep", "Dependency", status="Completed")
+        ready = self.issue(hub, "ready", "Ready issue", depends_on=[dep.id])
+        blocked_dep = self.issue(hub, "blocked-dep", "Blocked dependency", status="In Progress")
+        blocked = self.issue(hub, "blocked", "Blocked issue", depends_on=[blocked_dep.id])
+        issues = [dep, ready, blocked_dep, blocked]
         by_id = {issue.id: issue for issue in issues}
-        self.assertEqual(list_mod.readiness(by_id["ready"], by_id), ("Ready", ""))
-        label, reason = list_mod.readiness(by_id["blocked"], by_id)
+
+        self.assertEqual(file_hub.readiness(by_id["ready"], by_id), ("Ready", ""))
+        label, reason = file_hub.readiness(by_id["blocked"], by_id)
         self.assertEqual(label, "Blocked")
         self.assertIn("Blocked dependency", reason)
 
     def test_filters_and_expired_claim_readiness(self):
+        hub = self.make_repo()
         now = datetime.now(timezone.utc)
-        expired = page(
+        self.issue(
+            hub,
             "expired",
             "Expired claim",
-            "Not Started",
-            claim_id="work-old",
-            claim_expires_at=now - timedelta(minutes=1),
+            claim={
+                "id": "work-old",
+                "owner": "Codex",
+                "purpose": "work",
+                "expires_at": (now - timedelta(minutes=1)).isoformat(),
+            },
         )
-        active = page(
+        self.issue(
+            hub,
             "active",
             "Active claim",
-            "Not Started",
-            claim_id="work-new",
-            claim_expires_at=now + timedelta(minutes=30),
+            claim={
+                "id": "work-new",
+                "owner": "Codex",
+                "purpose": "work",
+                "expires_at": (now + timedelta(minutes=30)).isoformat(),
+            },
         )
-        issues = [list_mod.Issue.from_page(item) for item in [expired, active]]
-        by_id = {issue.id: issue for issue in issues}
-        args = SimpleNamespace(
-            status=None, owner=None, priority=None, type=None, area=None, readiness="Ready"
-        )
-        rows = list_mod.apply_filters(issues, by_id, args)
+
+        rows, by_id = list_mod.load_file_rows(self.file_args(hub, readiness="Ready"))
         self.assertEqual([issue.title for issue, _, _ in rows], ["Expired claim"])
         json_output = list_mod.json_rows(rows, by_id)
         self.assertIn("work-old", json_output)
 
     def test_json_output_honors_limit_without_recomputing_readiness(self):
-        pages = [
-            page("ready-1", "Ready 1", "Not Started", "P0", updated_at="2026-06-03T00:00:00Z"),
-            page("ready-2", "Ready 2", "Not Started", "P1", updated_at="2026-06-02T00:00:00Z"),
-            page("ready-3", "Ready 3", "In Review", "P2", updated_at="2026-06-01T00:00:00Z"),
-        ]
-        issues = [list_mod.Issue.from_page(item) for item in pages]
-        issues.sort(key=list_mod.issue_sort_key)
-        by_id = {issue.id: issue for issue in issues}
-        args = SimpleNamespace(
-            status=None, owner=None, priority=None, type=None, area=None, readiness="Ready"
-        )
-        rows = list_mod.apply_filters(issues, by_id, args)
+        hub = self.make_repo()
+        self.issue(hub, "ready-1", "Ready 1", priority="P0")
+        self.issue(hub, "ready-2", "Ready 2", priority="P1")
+        self.issue(hub, "ready-3", "Ready 3", status="In Review", priority="P2")
 
+        rows, by_id = list_mod.load_file_rows(self.file_args(hub, readiness="Ready"))
         json_output = list_mod.json_rows(rows, by_id, limit=2)
 
         self.assertIn("Ready 1", json_output)
         self.assertIn("Ready 2", json_output)
         self.assertNotIn("Ready 3", json_output)
+
+    def test_file_backend_change_filter_and_json_change_field(self):
+        hub = self.make_repo()
+        file_hub.create_change_packet(hub, "first-change", "First Change")
+        file_hub.create_change_packet(hub, "second-change", "Second Change")
+        first = file_hub.create_issue_file(hub, "First issue", "first-issue")
+        second = file_hub.create_issue_file(hub, "Second issue", "second-issue")
+        file_hub.link_issue_to_change(hub, "first-change", first.id)
+        file_hub.link_issue_to_change(hub, "second-change", second.id)
+
+        rows, by_id = list_mod.load_file_rows(
+            self.file_args(hub, change="first-change", readiness="Ready")
+        )
+
+        self.assertEqual([issue.id for issue, _, _ in rows], ["first-issue"])
+        payload = json.loads(list_mod.json_rows(rows, by_id))
+        self.assertEqual(payload[0]["change"], "first-change")
+
+    def test_file_backend_missing_change_filter_fails_clearly(self):
+        hub = self.make_repo()
+
+        with self.assertRaises(SystemExit) as raised:
+            list_mod.load_file_rows(self.file_args(hub, change="missing-change"))
+
+        self.assertIn("No change packet found", str(raised.exception))
 
 
 if __name__ == "__main__":

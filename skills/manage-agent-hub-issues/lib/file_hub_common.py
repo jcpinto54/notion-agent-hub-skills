@@ -450,7 +450,7 @@ class FileHubIssue:
     commit_sha: str = ""
     pr_url: str = ""
     related_links: str = ""
-    notion_url: str = ""
+    external_url: str = ""
     updated_at: datetime | None = None
     extra_frontmatter: dict[str, Any] = field(default_factory=dict, repr=False)
 
@@ -480,7 +480,7 @@ class FileHubIssue:
             "commit_sha",
             "pr_url",
             "related_links",
-            "notion_url",
+            "external_url",
         }
         return cls(
             id=issue_id,
@@ -505,7 +505,7 @@ class FileHubIssue:
             commit_sha=str(data.get("commit_sha") or ""),
             pr_url=str(data.get("pr_url") or ""),
             related_links=str(data.get("related_links") or ""),
-            notion_url=str(data.get("notion_url") or ""),
+            external_url=str(data.get("external_url") or ""),
             updated_at=datetime.fromtimestamp(stat.st_mtime, timezone.utc),
             extra_frontmatter={
                 key: value for key, value in data.items() if key not in known_keys
@@ -546,7 +546,7 @@ class FileHubIssue:
             "commit_sha": self.commit_sha,
             "pr_url": self.pr_url,
             "related_links": self.related_links,
-            "notion_url": self.notion_url,
+            "external_url": self.external_url,
         }
 
     def write(self) -> None:
@@ -724,7 +724,7 @@ def create_hub(root: Path, project_name: str | None = None) -> Path:
             "source_of_truth": "file",
             "project": name,
             "canonical_store": "file",
-            "notion_mirror": {
+            "external_mirror": {
                 "enabled": False,
                 "data_source_id": "",
                 "page_url": "",
@@ -1122,6 +1122,39 @@ def link_issue_to_change(hub_path: Path, change_slug: str, issue_id: str) -> dic
         tasks_text = tasks_text.rstrip() + f"\n\n- [ ] {issue.id} - {issue.title}\n"
         atomic_write(tasks_path, tasks_text)
     return {"ok": True, "change": change_slug, "issue": issue.id}
+
+
+def unlink_issue_from_change(hub_path: Path, change_slug: str, issue_id: str) -> dict[str, Any]:
+    issue = issue_by_id(hub_path, issue_id)
+    change = load_change(hub_path, change_slug)
+    previous_issues = normalize_list(change.get("issues"))
+    change["issues"] = remove_value(previous_issues, issue.id)
+    change["updated_at"] = isoformat(now_utc())
+    write_change(hub_path, change_slug, change)
+
+    previous_change = issue.change
+    if issue.change == change_slug:
+        issue.change = ""
+        issue.write()
+
+    tasks_path = change_dir(hub_path, change_slug) / "tasks.md"
+    removed_task = False
+    if tasks_path.exists():
+        tasks_text = tasks_path.read_text(encoding="utf-8")
+        updated_tasks = remove_task_issue(tasks_text, issue.id)
+        removed_task = updated_tasks != tasks_text
+        if removed_task:
+            atomic_write(tasks_path, updated_tasks)
+
+    return {
+        "ok": True,
+        "change": change_slug,
+        "issue": issue.id,
+        "previous_change": previous_change,
+        "removed_from_change": issue.id in previous_issues,
+        "cleared_issue_change": previous_change == change_slug,
+        "removed_task": removed_task,
+    }
 
 
 def add_issue_dependency(hub_path: Path, issue_id: str, depends_on: str) -> dict[str, Any]:
@@ -1841,6 +1874,12 @@ def extract_task_issue_ids(tasks_text: str) -> list[str]:
         if match:
             ids.append(match.group(1))
     return ids
+
+
+def remove_task_issue(tasks_text: str, issue_id: str) -> str:
+    pattern = re.compile(rf"\s*-\s*\[[ xX]\]\s*`?{re.escape(issue_id)}`?\b")
+    kept = [line for line in tasks_text.splitlines() if not pattern.match(line)]
+    return "\n".join(kept).rstrip() + "\n"
 
 
 def write_report(hub_path: Path, name: str, result: dict[str, Any]) -> None:

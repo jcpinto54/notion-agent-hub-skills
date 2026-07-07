@@ -22,7 +22,7 @@ python3 <repo>/skills/manage-agent-hub-issues/scripts/agent_hub.py claim acquire
 3. Fetch the full issue body, properties, dependencies, PR, commit, checks, and linked artifacts.
 4. Verify completion criteria, evidence, skipped checks, risks, and follow-ups.
 5. Decide pass, fail, or abandon.
-6. Append the review entry through `agent-hub issue append-activity` or `agent-hub issue add-evidence` for repo-native hubs. Use Notion MCP only for legacy Notion hubs.
+6. Append the review entry through `agent-hub issue append-activity` or `agent-hub issue add-evidence`.
 7. Release the review claim with the matching mode through the deterministic claim command.
 8. Fetch the issue again and report final status, verification, dependency impact, and follow-ups.
 

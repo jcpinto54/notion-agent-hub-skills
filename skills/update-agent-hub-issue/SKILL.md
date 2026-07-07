@@ -1,11 +1,11 @@
 ---
 name: update-agent-hub-issue
-description: Update Agent Hub issue progress, blockers, handoffs, repo metadata, work claim releases, and In Progress to In Review submissions in repo-native `.hub` issues or legacy Notion hubs. Use when a user asks to report progress, pause, block, hand off, release, submit for review, attach a PR, or move an Agent Hub issue after work has started.
+description: Update Agent Hub issue progress, blockers, handoffs, repo metadata, work claim releases, and In Progress to In Review submissions in repo-native `.hub` issues. Use when a user asks to report progress, pause, block, hand off, release, submit for review, attach a PR, or move an Agent Hub issue after work has started.
 ---
 
 # Update Agent Hub Issue
 
-For repo-native hubs, append durable entries to `.hub/issues/<issue-id>.md`. For legacy hubs, use Notion MCP for rich issue body updates. Use `claim-agent-hub-issue`'s script for claim checks, renewals, and releases.
+For repo-native hubs, append durable entries to `.hub/issues/<issue-id>.md`. Use `claim-agent-hub-issue`'s script for claim checks, renewals, and releases.
 
 ## Required Claim Check
 
@@ -22,7 +22,7 @@ If the claim is missing, expired, or mismatched, do not continue without explici
 Append a durable activity-log entry. Include:
 
 - Scope completed since the last update
-- Files, systems, Notion pages, PRs, commands, screenshots, or logs touched
+- Files, systems, PRs, commands, screenshots, or logs touched
 - Decisions and rationale
 - Verification run and results
 - Risks, skipped checks, or unknowns

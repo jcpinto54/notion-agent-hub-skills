@@ -13,8 +13,7 @@ specific Agent Hub action.
 4. Run `agent-hub state refresh` when available.
 5. If the v3 CLI is unavailable, use the current init compatibility script only
    for the layout it supports and report any missing v3 paths as assumptions.
-6. Use legacy Notion setup only when the user explicitly asks for an existing
-   Notion hub or credential setup.
+6. Keep repo work in `.hub/`; external notes are context only.
 
 ## Create Or Link Work
 
@@ -94,6 +93,8 @@ Before `In Progress -> In Review`, require:
 - commit SHA
 - pushed branch
 - PR URL
+- preview URL when CI produced a PR preview, or a note that no preview was
+  available
 - regression evidence or explicit exception
 - risks and skipped checks
 
@@ -107,6 +108,12 @@ agent-hub claim release
 Prefer release mode semantics that atomically clear the work claim and preserve
 review evidence.
 
+For user-facing web changes, when a CI-created preview URL is available for a
+PR, spawn a preview-verification subagent before independent review. The
+preview-verification agent should check the deployed preview website against the
+issue done criteria, record durable evidence, and send the issue back or report
+a blocker when the preview is inaccessible, stale, or fails a criterion.
+
 ## Review
 
 Claim review first. Review the durable issue/change record, PR, commit, linked
@@ -119,11 +126,14 @@ Pass only when evidence covers:
 - dependency state
 - regression/TDD requirement or exception
 - final verification
+- preview-verification evidence or a recorded no-preview rationale for
+  user-facing web changes
 - repo metadata for repo-changing work
 
 Fail or send back when evidence is missing, criteria are unmet, dependencies are
-unresolved, or skipped checks are not justified. Use deterministic commands to
-append review findings, set status, and release the review claim.
+unresolved, preview evidence is missing when a preview exists, or skipped checks
+are not justified. Use deterministic commands to append review findings, set
+status, and release the review claim.
 
 ## Audit And Analyze
 
@@ -166,3 +176,11 @@ Use `iterate-agent-hub-work` for one subagent-first iteration.
    back to spec/audit instead.
 6. Return spawned agent IDs, issue IDs, and expected evidence. Do not wait unless
    the user explicitly asked for a synchronous iteration.
+
+Use `run-agent-hub-loop` when the user asks to keep operating on one change
+packet until blocked, complete, or budget exhausted. The loop skill repeatedly
+analyzes the packet, lists ready implementation work, spawns implementation
+subagents, waits for the wave, spawns preview-verification subagents for
+PR-backed issues when CI-created previews are available, lists ready review work,
+spawns independent review subagents, waits for review, refreshes state, and
+stops on budget or blocking diagnostics.

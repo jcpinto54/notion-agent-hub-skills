@@ -1,41 +1,237 @@
 version: 3
-updated_at: 2026-06-27T18:15:13.395008Z
+updated_at: 2026-07-03T16:48:25.591113Z
 issues:
-  hub-viewer-data-api:
-    title: "Define read-only hub viewer data contract"
+  agent-hub-sync-merged-prs:
+    title: "Sync merged GitHub PRs into Agent Hub issue completion"
+    status: "In Review"
+    priority: P1
+    owner: Unassigned
+    change: ""
+    depends_on: []
+    blocks: []
+  hub-app-multi-instance-runtime:
+    title: "Support multiple simultaneous Agent Hub app instances"
     status: "Not Started"
     priority: P1
     owner: Unassigned
+    change: ""
+    depends_on: []
+    blocks: []
+  hub-viewer-board-detail-footer:
+    title: "Keep board issue detail footer pinned and minimizable"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: hub-viewer-board-polish
+    depends_on: []
+    blocks: []
+  hub-viewer-card-tag-overflow:
+    title: "Prevent long board tags from overflowing cards"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: hub-viewer-board-polish
+    depends_on: []
+    blocks: []
+  hub-viewer-data-api:
+    title: "Define read-only hub viewer data contract"
+    status: Completed
+    priority: P1
+    owner: codex-reviewer
     change: readonly-kanban-viewer
     depends_on: []
     blocks:
       - hub-viewer-kanban-ui
-  hub-viewer-kanban-ui:
-    title: "Implement read-only Kanban board UI"
+  hub-viewer-issue-detail-contract:
+    title: "Extend dashboard snapshot with issue detail sections"
     status: "Not Started"
     priority: P1
     owner: Unassigned
+    change: readonly-issue-viewer
+    depends_on: []
+    blocks:
+      - hub-viewer-issue-nav-state
+      - hub-viewer-issue-page-ui
+  hub-viewer-issue-nav-state:
+    title: "Wire Issue rail navigation state"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-issue-viewer
+    depends_on:
+      - hub-viewer-issue-detail-contract
+    blocks:
+      - hub-viewer-issue-page-ui
+  hub-viewer-issue-page-ui:
+    title: "Render read-only Issue page UI"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-issue-viewer
+    depends_on:
+      - hub-viewer-issue-detail-contract
+      - hub-viewer-issue-nav-state
+    blocks:
+      - hub-viewer-issue-page-verification-docs
+  hub-viewer-issue-page-verification-docs:
+    title: "Document and verify read-only Issue page"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: readonly-issue-viewer
+    depends_on:
+      - hub-viewer-issue-page-ui
+    blocks: []
+  hub-viewer-kanban-ui:
+    title: "Implement read-only Kanban board UI"
+    status: Completed
+    priority: P1
+    owner: codex-reviewer
     change: readonly-kanban-viewer
     depends_on:
       - hub-viewer-data-api
     blocks:
       - hub-viewer-smoke-tests
-  hub-viewer-smoke-tests:
-    title: "Add regression and Playwright smoke coverage for hub viewer"
+  hub-viewer-live-client:
+    title: "Add live mode to the static viewer client"
     status: "Not Started"
     priority: P1
     owner: Unassigned
+    change: hub-viewer-live-updates
+    depends_on:
+      - hub-viewer-live-serve-api
+    blocks:
+      - hub-viewer-live-regression-docs
+  hub-viewer-live-regression-docs:
+    title: "Document and verify live dashboard workflow"
+    status: "Not Started"
+    priority: P2
+    owner: Unassigned
+    change: hub-viewer-live-updates
+    depends_on:
+      - hub-viewer-live-snapshot-cache
+      - hub-viewer-live-serve-api
+      - hub-viewer-live-client
+    blocks: []
+  hub-viewer-live-serve-api:
+    title: "Add read-only dashboard serve API"
+    status: "In Progress"
+    priority: P1
+    owner: Codex
+    change: hub-viewer-live-updates
+    depends_on:
+      - hub-viewer-live-snapshot-cache
+    blocks:
+      - hub-viewer-live-client
+      - hub-viewer-live-regression-docs
+  hub-viewer-live-snapshot-cache:
+    title: "Add live dashboard snapshot cache and revision metadata"
+    status: Completed
+    priority: P1
+    owner: Unassigned
+    change: hub-viewer-live-updates
+    depends_on: []
+    blocks:
+      - hub-viewer-live-serve-api
+      - hub-viewer-live-regression-docs
+  hub-viewer-smoke-tests:
+    title: "Add regression and Playwright smoke coverage for hub viewer"
+    status: Completed
+    priority: P1
+    owner: codex-reviewer
     change: readonly-kanban-viewer
     depends_on:
       - hub-viewer-kanban-ui
     blocks: []
+  viewer-audit-data-contract:
+    title: "Add audit and analysis data to dashboard snapshots"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: viewer-audit-page
+    depends_on: []
+    blocks:
+      - viewer-audit-nav-shell
+      - viewer-audit-diagnostics-renderer
+      - viewer-audit-docs-fixtures
+  viewer-audit-diagnostics-renderer:
+    title: "Render read-only audit diagnostics page"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: viewer-audit-page
+    depends_on:
+      - viewer-audit-data-contract
+      - viewer-audit-nav-shell
+    blocks:
+      - viewer-audit-docs-fixtures
+  viewer-audit-docs-fixtures:
+    title: "Document and verify Audit page behavior"
+    status: "Not Started"
+    priority: P2
+    owner: Unassigned
+    change: viewer-audit-page
+    depends_on:
+      - viewer-audit-data-contract
+      - viewer-audit-nav-shell
+      - viewer-audit-diagnostics-renderer
+    blocks: []
+  viewer-audit-nav-shell:
+    title: "Wire Audit rail navigation shell"
+    status: "Not Started"
+    priority: P1
+    owner: Unassigned
+    change: viewer-audit-page
+    depends_on:
+      - viewer-audit-data-contract
+    blocks:
+      - viewer-audit-diagnostics-renderer
+      - viewer-audit-docs-fixtures
 changes:
+  hub-viewer-board-polish:
+    title: "Polish Agent Hub viewer board layout"
+    status: Draft
+    priority: P1
+    owner: codex
+    issues:
+      - hub-viewer-board-detail-footer
+      - hub-viewer-card-tag-overflow
+  hub-viewer-live-updates:
+    title: "Make Agent Hub viewer live-updating"
+    status: Draft
+    priority: P1
+    owner: codex
+    issues:
+      - hub-viewer-live-snapshot-cache
+      - hub-viewer-live-serve-api
+      - hub-viewer-live-client
+      - hub-viewer-live-regression-docs
+  readonly-issue-viewer:
+    title: "Implement read-only Issue page in Agent Hub viewer"
+    status: Draft
+    priority: P1
+    owner: codex
+    issues:
+      - hub-viewer-issue-detail-contract
+      - hub-viewer-issue-nav-state
+      - hub-viewer-issue-page-ui
+      - hub-viewer-issue-page-verification-docs
   readonly-kanban-viewer:
     title: "Build read-only Kanban hub viewer"
-    status: Draft
+    status: Archived
     priority: P1
     owner: codex
     issues:
       - hub-viewer-data-api
       - hub-viewer-kanban-ui
       - hub-viewer-smoke-tests
+  viewer-audit-page:
+    title: "Read-only Audit page for Agent Hub viewer"
+    status: Draft
+    priority: P1
+    owner: codex
+    issues:
+      - viewer-audit-data-contract
+      - viewer-audit-nav-shell
+      - viewer-audit-diagnostics-renderer
+      - viewer-audit-docs-fixtures

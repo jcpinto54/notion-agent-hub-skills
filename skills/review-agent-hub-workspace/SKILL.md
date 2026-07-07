@@ -1,6 +1,6 @@
 ---
 name: review-agent-hub-workspace
-description: Audit Agent Hub workspace organization and issue hygiene. Use when a user asks to review, audit, clean up, diagnose, or report on a Notion Agent Hub board for stale claims, missing dependencies, bad blockers, missing PR metadata, vague issues, or unhealthy In Review items.
+description: Audit Agent Hub workspace organization and issue hygiene. Use when a user asks to review, audit, clean up, diagnose, or report on a Agent Hub board for stale claims, missing dependencies, bad blockers, missing PR metadata, vague issues, or unhealthy In Review items.
 ---
 
 # Review Agent Hub Workspace

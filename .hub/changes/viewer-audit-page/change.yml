@@ -1,0 +1,14 @@
+id: viewer-audit-page
+title: "Read-only Audit page for Agent Hub viewer"
+status: Draft
+priority: P1
+owner: codex
+issues:
+  - viewer-audit-data-contract
+  - viewer-audit-nav-shell
+  - viewer-audit-diagnostics-renderer
+  - viewer-audit-docs-fixtures
+depends_on: []
+blocks: []
+created_at: 2026-06-28T13:14:34.653902Z
+updated_at: 2026-06-28T13:14:35.669294Z

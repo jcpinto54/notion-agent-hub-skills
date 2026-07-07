@@ -15,11 +15,11 @@ blocks: ["hub-viewer-smoke-tests"]
 claim: {}
 base_branch: "main"
 branch: "codex/agent-hub-v3-repo-native"
-worktree_path: "/Users/jcpinto/git/notion-agent-hub-skills"
+worktree_path: "/Users/jcpinto/git/agent-hub-skills"
 commit_sha: "b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9"
-pr_url: "https://github.com/jcpinto54/notion-agent-hub-skills/pull/1"
+pr_url: "https://github.com/jcpinto54/agent-hub-skills/pull/1"
 related_links: ""
-notion_url: ""
+external_url: ""
 ---
 ## Context
 
@@ -50,7 +50,7 @@ context scannable.
 - Do not add write controls, status mutation, issue creation, claim actions, or
   browser-side `.hub` parsing.
 - Do not add Node, Vite, React, shadcn, package managers, or external CDNs.
-- Do not implement authentication, remote hosting, Notion sync, or live reload.
+- Do not implement authentication, remote hosting, external sync, or live reload.
 - Do not persist filters or create user-specific settings.
 
 ## Done Criteria
@@ -131,7 +131,7 @@ Date: 2026-06-28T10:50:16.688812Z
 Agent: codex-orchestrator
 Claim ID: hub-viewer-kanban-ui-work-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Regression-first UI implementation
 First failing result: python3 -m unittest tests.test_hub_viewer_static failed before viewer files and sample state existed.
@@ -147,7 +147,7 @@ Agent: codex-orchestrator
 Implemented: dependency-free read-only static Kanban viewer consuming dashboard JSON.
 Touched: skills/list-agent-hub-issues/viewer/index.html; styles.css; app.js; hub-state.sample.json; .gitignore; tests/test_hub_viewer_static.py; skills/list-agent-hub-issues/SKILL.md; README.md.
 Checks run: python3 -m unittest discover -s tests; python3 evals/run_evals.py; skill metadata validation; git diff --check; Browser/IAB desktop and mobile smoke.
-Artifacts: PR https://github.com/jcpinto54/notion-agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9.
+Artifacts: PR https://github.com/jcpinto54/agent-hub-skills/pull/1; commit b93175ac9f7f1e8792c0bc8bd2c6191c724c7bc9.
 Risks / skipped checks: no permanent Playwright suite added; browser smoke was manual through Browser/IAB.
 Reviewer should verify: read-only controls, schema consumption, cards/columns, detail tray, responsive behavior, and dependency-free source.
 
@@ -163,7 +163,7 @@ Date: 2026-06-28T10:53:40.107136Z
 Agent: codex-reviewer
 Claim ID: hub-viewer-kanban-ui-review-20260628
 Branch: codex/agent-hub-v3-repo-native
-Worktree Path: /Users/jcpinto/git/notion-agent-hub-skills
+Worktree Path: /Users/jcpinto/git/agent-hub-skills
 
 ### Review verification
 Command: python3 -m unittest tests.test_hub_viewer_static

@@ -1,0 +1,23 @@
+{
+  "id": "packet-loop-delegates-implementation",
+  "title": "Packet loop delegates implementation work",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Run agents on a change packet until blocked.",
+  "expected": {
+    "required_phrases": [
+      "spawn one implementation subagent per row",
+      "implementation agents claim, code, test, commit, push, open PRs, record evidence, and submit to review"
+    ]
+  },
+  "must_not": [
+    "parent_agent_implements_directly",
+    "skip_claim_before_work"
+  ],
+  "rubric": [
+    {
+      "id": "delegates_implementation",
+      "requirement": "Packet loop policy delegates implementation to bounded subagents."
+    }
+  ]
+}

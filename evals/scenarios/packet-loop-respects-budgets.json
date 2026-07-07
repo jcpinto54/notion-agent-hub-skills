@@ -1,0 +1,26 @@
+{
+  "id": "packet-loop-respects-budgets",
+  "title": "Packet loop respects wave and time budgets",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Run a budget-capped packet loop.",
+  "expected": {
+    "required_phrases": [
+      "max waves: 5",
+      "max agents per wave: 5",
+      "max elapsed time: 120 minutes",
+      "max waves are used",
+      "max elapsed time is reached"
+    ]
+  },
+  "must_not": [
+    "unbounded_loop",
+    "ignore_budget"
+  ],
+  "rubric": [
+    {
+      "id": "budget_caps",
+      "requirement": "Packet loop policy defines and respects default budgets."
+    }
+  ]
+}

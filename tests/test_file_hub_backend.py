@@ -62,7 +62,7 @@ backend behavior that agents can rely on without hand-editing `.hub` files.
 ## Out Of Scope
 
 - No hosted web dashboard.
-- No Notion mirror updates.
+- No external mirror updates.
 
 ## Done Criteria
 

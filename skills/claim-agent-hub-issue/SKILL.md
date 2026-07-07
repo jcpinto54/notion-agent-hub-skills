@@ -1,17 +1,17 @@
 ---
 name: claim-agent-hub-issue
-description: Claim, check, renew, or release Agent Hub ownership leases for implementation work or review work in repo-native `.hub` issues or legacy Notion hubs. Use when a user asks to claim ready work, claim review, renew a claim, release abandoned or submitted work, or clear passed/failed review ownership in an Agent Hub.
+description: Claim, check, renew, or release Agent Hub ownership leases for implementation work or review work in repo-native `.hub` issues. Use when a user asks to claim ready work, claim review, renew a claim, release abandoned or submitted work, or clear passed/failed review ownership in an Agent Hub.
 ---
 
 # Claim Agent Hub Issue
 
-Use the bundled script for ownership leases. It defaults to `--backend auto`: repo-native `.hub/config.yml` is used when present; otherwise it falls back to Notion.
+Use the bundled script for ownership leases. It operates on repo-native `.hub` issues.
 
-For file hubs, the script writes durable issue frontmatter/activity entries and uses `.hub/runtime/claims.json` as the gitignored active-lock source. For Notion hubs, the script writes only status, owner, claim fields, and optional repo metadata properties.
+The script writes durable issue frontmatter/activity entries and uses `.hub/runtime/claims.json` as the gitignored active-lock source.
 
 Important: the script does not create git branches or worktrees. After a successful claim, the agent must create or verify the required worktree before touching repo files.
 
-Before claiming, ensure `.hub/config.yml` exists for repo-native hubs or `setup-agent-hub` has configured the default Notion `Issues / Activities` data source. Use `--hub-root` or `--data-source-id` only for one-off overrides.
+Before claiming, ensure `.hub/config.yml` exists. Use `--hub-root` only for one-off overrides.
 
 ## Claim Work
 

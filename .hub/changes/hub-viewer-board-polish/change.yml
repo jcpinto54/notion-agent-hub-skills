@@ -1,0 +1,12 @@
+id: hub-viewer-board-polish
+title: "Polish Agent Hub viewer board layout"
+status: Draft
+priority: P1
+owner: codex
+issues:
+  - hub-viewer-board-detail-footer
+  - hub-viewer-card-tag-overflow
+depends_on: []
+blocks: []
+created_at: 2026-07-03T16:41:45.745307Z
+updated_at: 2026-07-03T16:41:55.042889Z

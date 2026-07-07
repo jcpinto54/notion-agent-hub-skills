@@ -1,0 +1,24 @@
+{
+  "id": "packet-loop-preview-verification",
+  "title": "Packet loop delegates preview website verification",
+  "kind": "policy_text",
+  "fixture": "valid-lite-hub",
+  "prompt": "Run a packet loop for a project whose PR CI creates preview deployments.",
+  "expected": {
+    "required_phrases": [
+      "when a CI-created preview URL is available for a PR, spawn a preview-verification subagent before independent review",
+      "preview-verification agents check the deployed preview website against the issue done criteria",
+      "normal review should treat preview evidence as durable input"
+    ]
+  },
+  "must_not": [
+    "same_agent_reviews_own_work",
+    "skip_preview_verification_when_preview_exists"
+  ],
+  "rubric": [
+    {
+      "id": "delegates_preview_verification",
+      "requirement": "Packet loop policy delegates live preview website checks to a separate subagent before normal review when a PR preview exists."
+    }
+  ]
+}

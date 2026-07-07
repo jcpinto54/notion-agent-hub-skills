@@ -1,16 +1,16 @@
 ---
 name: list-agent-hub-issues
-description: Read-only Agent Hub listing and readiness automation for repo-native `.hub` issues and legacy Notion hubs. Use when a user asks to list, enumerate, show, count, filter, summarize, export, or find ready-to-start Agent Hub issues, including dependency-aware readiness, board views, Markdown tables, or JSON output.
+description: Read-only Agent Hub listing and readiness automation for repo-native `.hub` issues. Use when a user asks to list, enumerate, show, count, filter, summarize, export, or find ready-to-start Agent Hub issues, including dependency-aware readiness, board views, Markdown tables, or JSON output.
 ---
 
 # List Agent Hub Issues
 
-Use the bundled script for read-only listing. It defaults to `--backend auto`: repo-native `.hub/config.yml` is used when present; otherwise it falls back to the configured Notion hub.
+Use the bundled script for read-only listing of repo-native `.hub` issues.
 
 ## Workflow
 
-1. Ensure Agent Hub setup exists. If not, use `init-agent-hub` for repo-native hubs or `setup-agent-hub` for legacy Notion credentials.
-2. Run the list script. For file hubs it reads `.hub/issues/*.md`; for Notion it reads the default `Issues / Activities` data source from repo `.agent-hub.local`, then `~/.codex/agent-hub/.env`.
+1. Ensure Agent Hub setup exists. If not, use `init-agent-hub`.
+2. Run the list script. It reads `.hub/issues/*.md`.
 3. Run:
 
 ```bash
@@ -21,12 +21,11 @@ python3 <skill-dir>/scripts/agent_hub_list.py
 
 ```bash
 python3 <skill-dir>/scripts/agent_hub_list.py --backend file
-python3 <skill-dir>/scripts/agent_hub_list.py --backend notion
 python3 <skill-dir>/scripts/agent_hub_list.py --readiness Ready
+python3 <skill-dir>/scripts/agent_hub_list.py --backend file --change '<change-slug>'
 python3 <skill-dir>/scripts/agent_hub_list.py --status 'In Review'
 python3 <skill-dir>/scripts/agent_hub_list.py --format json
 python3 <skill-dir>/scripts/agent_hub_list.py --hub-root '<repo>/.hub'
-python3 <skill-dir>/scripts/agent_hub_list.py --data-source-id '<id>'
 ```
 
 ## Read-Only Viewer
@@ -59,9 +58,8 @@ Open `http://localhost:8765`. The viewer is read-only: it consumes
 - Sorts by priority `P0` to `P3`, then newest update first.
 - Computes `Not Started` readiness from owner, blockers, active claim, and dependency statuses.
 - Computes `In Review` readiness from owner and active claim.
-- Uses one data source query for dependency status lookup, avoiding N+1 dependency fetches for normal hubs.
 - Flags expired and active claims through `Claim ID` and `Claim Expires At`.
-- For file hubs, renders local issue file paths as links and uses issue frontmatter plus `.hub/runtime/claims.json` claim state.
+- Renders local issue file paths as links, supports `--change <slug>` packet filtering, and uses issue frontmatter plus `.hub/runtime/claims.json` claim state.
 
 ## Safety
 

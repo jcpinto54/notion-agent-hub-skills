@@ -14,7 +14,7 @@ Clear issues, stable evidence, and reviewable changes.
 
 ## Non-Goals
 
-Do not make Notion the recommended source of truth.
+Do not make external services the recommended source of truth.
 
 ## Success Signals
 

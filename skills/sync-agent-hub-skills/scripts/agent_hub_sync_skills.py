@@ -15,7 +15,6 @@ from pathlib import Path
 DEFAULT_LOCAL_SKILLS_DIR = Path.home() / ".codex" / "skills"
 EXPECTED_SKILLS = [
     "dry-mece",
-    "setup-agent-hub",
     "manage-agent-hub-issues",
     "init-agent-hub",
     "create-agent-hub-issue",
@@ -23,12 +22,13 @@ EXPECTED_SKILLS = [
     "list-agent-hub-issues",
     "claim-agent-hub-issue",
     "iterate-agent-hub-work",
+    "run-agent-hub-loop",
     "update-agent-hub-issue",
     "review-agent-hub-issue",
     "review-agent-hub-workspace",
     "sync-agent-hub-skills",
 ]
-LEGACY_SKILL_RENAMES = {"set-agent-hub-api-key": "setup-agent-hub"}
+LEGACY_SKILL_RENAMES: dict[str, str] = {}
 OPTIONAL_UNINSTALLED_SKILLS = {"sync-agent-hub-skills"}
 EXCLUDED_DIRS = {"__pycache__", ".git"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".swp", ".tmp"}

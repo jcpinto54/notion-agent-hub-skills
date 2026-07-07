@@ -3,7 +3,7 @@
 ## Source Of Truth
 
 - Use `.hub/` in the target repository as the only durable source of truth for repo work.
-- Use Notion only for legacy hubs or optional mirrors. Read `.hub` before trusting a mirror.
+- Use `.hub/` before trusting any external notes or mirrors.
 - Keep `.hub/runtime/` gitignored. Runtime claims are local live state, not durable project history.
 
 ## Deterministic Write Policy
@@ -86,6 +86,9 @@ Implementation work must define verification before coding.
   automated-test exception with rationale.
 - UI/user-facing workflows should include browser automation smoke checks when
   feasible.
+- For PR-backed web work, if CI creates a preview deployment, the orchestrator
+  should delegate preview website verification to a separate subagent before
+  normal review.
 - Review fails when regression evidence, done-criteria coverage, final
   verification, or repo evidence is missing.
 
@@ -107,6 +110,8 @@ Do not submit repo work to review unless:
 - normal PR exists
 - `Commit SHA` and `PR URL` are recorded
 - tests/evals/checks or skipped-check rationale are recorded
+- preview verification evidence is recorded when a CI-created PR preview exists
+  for user-facing web work
 
 Completion is a review decision. Use a deterministic release/status command or
 the review skill; do not manually clear claims or set `Completed`.

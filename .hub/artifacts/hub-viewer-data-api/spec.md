@@ -4,7 +4,7 @@
 
 Agent Hub needs a read-only dashboard data contract so a visual Kanban viewer can
 render repo-native `.hub` state without parsing Markdown in the browser or
-calling Notion. The contract should be deterministic, stable under tests, and
+calling external services. The contract should be deterministic, stable under tests, and
 safe to export without refreshing state or writing audit reports.
 
 ## Scope
@@ -25,7 +25,7 @@ safe to export without refreshing state or writing audit reports.
 - Do not add mutable dashboard operations.
 - Do not implement the visual web UI in this issue.
 - Do not parse issue Markdown in browser code.
-- Do not add Notion sync, authentication, package managers, or external
+- Do not add external sync, authentication, package managers, or external
   dashboard dependencies.
 
 ## Done Criteria

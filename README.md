@@ -7,7 +7,7 @@ Agent Hub v3 is a lightweight project operating system for agentic software
 work. A target repository owns a `.hub/` directory, and that directory is the
 durable source of truth for the project: issues, changes, decisions, evidence,
 reports, reviews, and archived history all live there. Chat transcripts,
-subagent memories, and optional Notion mirrors are helpful context, but they are
+subagent memories, and other external notes can be helpful context, but they are
 not authoritative for repo work.
 
 ## Core Model
@@ -32,8 +32,7 @@ Agent Hub v3 separates deterministic state changes from agent judgment.
   criteria, regression coverage or exception, final verification, and PR or
   commit metadata when repo files changed.
 
-Use Notion only for legacy hubs or optional personal mirrors. Treat a mirror as
-stale until the local `.hub` record agrees with it.
+Treat external notes as stale until the local `.hub` record agrees with them.
 
 ## `.hub/` Layout
 
@@ -119,18 +118,18 @@ claims, dependencies, status, reports, archives, or layout.
 
 ## Skill Map
 
+For a task-oriented guide to which skill to use in common situations, see
+[`docs/agent-hub-usage-guide.md`](docs/agent-hub-usage-guide.md).
+
 Primary resolver:
 
 - `manage-agent-hub-issues`: main router and shared policy surface for v3
-  orchestration, deterministic writes, subagent-first execution, TDD gates,
-  review invariants, and legacy Notion compatibility.
+  orchestration, deterministic writes, subagent-first execution, TDD gates, and
+  review invariants.
 
-Setup and configuration:
+Setup:
 
-- `init-agent-hub`: initializes a repo-native `.hub/` layout, or a legacy Notion
-  hub only when explicitly requested.
-- `setup-agent-hub`: configures local Notion credentials and default legacy hub
-  metadata.
+- `init-agent-hub`: initializes a repo-native `.hub/` layout.
 
 Issue and change lifecycle:
 
@@ -141,6 +140,8 @@ Issue and change lifecycle:
   regression target.
 - `list-agent-hub-issues`: lists and filters work without mutating state,
   including dependency-aware readiness views.
+- `run-agent-hub-app`: exports a fresh read-only dashboard snapshot and starts
+  or reuses the local Agent Hub viewer app.
 - `claim-agent-hub-issue`: acquires, checks, renews, and releases optimistic
   leases for work or review.
 - `update-agent-hub-issue`: appends progress, blockers, handoffs, repo metadata,
@@ -151,6 +152,9 @@ Execution:
 - `iterate-agent-hub-work`: starts one bounded iteration by listing ready work,
   spawning up to 10 subagents, and returning their IDs without waiting for
   completion.
+- `run-agent-hub-loop`: runs a budget-capped packet operator loop that repeats
+  implementation and independent review waves until blocked, complete, or budget
+  exhausted.
 
 Review and audit:
 
@@ -297,6 +301,8 @@ python3 -m http.server 8765 --directory skills/list-agent-hub-issues/viewer
 
 Then open `http://localhost:8765`. The viewer is read-only and consumes the
 JSON snapshot; it never parses or mutates `.hub` files in the browser.
+For implementation details, see
+[`docs/hub-viewer-implementation.md`](docs/hub-viewer-implementation.md).
 
 ## Install
 
@@ -304,17 +310,18 @@ Install these skills with Codex's `skill-installer`:
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo jcpinto54/notion-agent-hub-skills \
+  --repo jcpinto54/agent-hub-skills \
   --path \
   skills/dry-mece \
-  skills/setup-agent-hub \
   skills/manage-agent-hub-issues \
   skills/init-agent-hub \
   skills/create-agent-hub-issue \
   skills/spec-agent-hub-issue \
   skills/list-agent-hub-issues \
+  skills/run-agent-hub-app \
   skills/claim-agent-hub-issue \
   skills/iterate-agent-hub-work \
+  skills/run-agent-hub-loop \
   skills/update-agent-hub-issue \
   skills/review-agent-hub-issue \
   skills/review-agent-hub-workspace \

@@ -1,4 +1,4 @@
 interface:
   display_name: "Init Agent Hub"
-  short_description: "Create a repo or Notion agent hub"
+  short_description: "Create a repo-native agent hub"
   default_prompt: "Use $init-agent-hub to create a repo-native Agent Hub for this project."

@@ -39,11 +39,10 @@ performed.
 
 ## Goal
 
-Move Agent Hub from the current v2 hybrid file/Notion framework to Agent Hub v3:
+Move Agent Hub from the current v2 hybrid framework to Agent Hub v3:
 
 - `.hub/` is the only source of truth for repo work.
-- Notion is removed from the recommended workflow and treated as legacy only if
-  backward compatibility is kept.
+- external services are not part of the recommended workflow.
 - Deterministic scripts own all `.hub` mutations.
 - Skills become thin routers, policy guides, and references.
 - Implementation work is TDD-first and regression-first.
@@ -59,7 +58,7 @@ eval, or agentic scenario eval first.
 Repository:
 
 ```text
-/Users/jcpinto/git/notion-agent-hub-skills
+/Users/jcpinto/git/agent-hub-skills
 ```
 
 Current v2 characteristics:
@@ -74,7 +73,7 @@ Current v2 characteristics:
 - `skills/manage-agent-hub-issues/lib/file_hub_common.py` contains the shared
   file backend helpers.
 - Existing scripts support init, create issue, list, claim, and append activity.
-- Existing tests include `tests/test_file_hub_backend.py` plus Notion-oriented
+- Existing tests include `tests/test_file_hub_backend.py` plus file-backed
   list and claim tests.
 - `docs/resolver-consolidation-plan.md` already proposes making
   `manage-agent-hub-issues` the primary resolver and reducing visible leaf
@@ -807,7 +806,7 @@ Required skill behavior:
 - Skill body stays lean.
 - Resolver policy says:
   - `.hub` is canonical
-  - Notion is legacy only
+  - external services are outside the repo-native source of truth
   - deterministic scripts own `.hub` mutations
   - main agent is orchestrator-only
   - subagents perform substantive work
@@ -942,7 +941,7 @@ The work is complete only when:
 - audit/analyze generate JSON and Markdown reports
 - TDD-first policy is encoded in templates and audits
 - subagent-first policy is encoded in templates and skills
-- Notion is removed from recommended workflow or clearly marked legacy
+- external services are removed from the recommended workflow
 - deterministic tests pass
 - fixture evals pass
 - agentic scenario evals pass
@@ -955,8 +954,7 @@ The work is complete only when:
 - Do not require script-driven agent invocation yet.
 - Do not add external eval frameworks yet.
 - Do not commit large binary artifacts by default.
-- Do not delete legacy Notion compatibility unless replacement docs and tests are
-  ready, or the user explicitly approves removal.
+- Do not remove compatibility behavior unless replacement docs and tests are ready, or the user explicitly approves removal.
 
 ## Final Report Expected From Implementing Agent
 
@@ -966,7 +964,7 @@ The final response after implementation should include:
 - summary of v3 behavior implemented
 - tests and evals added
 - validation commands run
-- any Notion legacy status
+- any removed-backend status
 - residual risks
 - files changed at a high level
 

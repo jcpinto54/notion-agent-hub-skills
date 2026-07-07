@@ -340,6 +340,32 @@ None.
         self.assertEqual(issue_frontmatter.get("change"), "agent-hub-v3")
         self.assertIn("build-v3-cli", (change_dir / "tasks.md").read_text(encoding="utf-8"))
 
+    def test_change_packet_issue_unlinking_clears_issue_and_packet_links(self):
+        root = self.make_repo()
+        hub = file_hub.create_hub(root, "V3 Project")
+        create_change_packet = self.require_backend_function("create_change_packet")
+        link_issue_to_change = self.require_backend_function("link_issue_to_change")
+        unlink_issue_from_change = self.require_backend_function("unlink_issue_from_change")
+
+        create_change_packet(hub, "agent-hub-v3", "Agent Hub v3")
+        issue = file_hub.create_issue_file(hub, "Build v3 CLI", "build-v3-cli")
+        link_issue_to_change(hub, "agent-hub-v3", issue.id)
+
+        result = unlink_issue_from_change(hub, "agent-hub-v3", issue.id)
+
+        self.assertEqual(result["issue"], "build-v3-cli")
+        self.assertEqual(result["previous_change"], "agent-hub-v3")
+        self.assertTrue(result["removed_from_change"])
+        self.assertTrue(result["cleared_issue_change"])
+        self.assertTrue(result["removed_task"])
+
+        change_dir = hub / "changes/agent-hub-v3"
+        change_data = self.read_yamlish(change_dir / "change.yml")
+        self.assertEqual(change_data.get("issues"), [])
+        issue_frontmatter, _ = self.read_frontmatter(hub / "issues/build-v3-cli.md")
+        self.assertEqual(issue_frontmatter.get("change"), "")
+        self.assertNotIn("build-v3-cli", (change_dir / "tasks.md").read_text(encoding="utf-8"))
+
     def test_issue_dependency_add_and_remove_updates_both_sides(self):
         root = self.make_repo()
         hub = file_hub.create_hub(root, "V3 Project")
@@ -728,6 +754,8 @@ Malformed frontmatter should be reported deterministically.
         stdout_dashboard = self.assert_cli_ok(root, "dashboard", "export", "--change", "cli-change")
         stdout_payload = json.loads(stdout_dashboard.stdout)
         self.assertEqual(stdout_payload["columns"][1]["title"], "Ready")
+        self.assert_cli_ok(root, "change", "link-issue", "--change", "cli-change", "--issue", "cli-issue")
+        self.assert_cli_ok(root, "change", "unlink-issue", "--change", "cli-change", "--issue", "cli-issue")
         self.assert_cli_ok(root, "change", "link-issue", "--change", "cli-change", "--issue", "cli-issue")
         self.assert_cli_ok(root, "issue", "add-dependency", "--issue", "cli-issue", "--depends-on", "cli-dependency")
         self.assert_cli_ok(root, "issue", "remove-dependency", "--issue", "cli-issue", "--depends-on", "cli-dependency")

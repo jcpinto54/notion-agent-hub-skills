@@ -2,7 +2,7 @@ version: 3
 source_of_truth: file
 project: "Agent Hub Skills"
 canonical_store: file
-notion_mirror:
+external_mirror:
   enabled: false
   data_source_id: ""
   page_url: ""

@@ -1,7 +1,7 @@
 [project]
 name = "agent-hub-skills"
 version = "0.1.0"
-description = "Reusable Codex skills and lightweight Notion API scripts for Agent Hub coordination"
+description = "Reusable Codex skills and lightweight external API scripts for Agent Hub coordination"
 requires-python = ">=3.11"
 
 [tool.ruff]

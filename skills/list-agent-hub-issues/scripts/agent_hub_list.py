@@ -1,147 +1,35 @@
 #!/usr/bin/env python3
-"""List Notion Agent Hub issues and compute dependency-aware readiness."""
+"""List Agent Hub issues and compute dependency-aware readiness."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 COMMON_LIB = Path(__file__).resolve().parents[2] / "manage-agent-hub-issues" / "lib"
 sys.path.insert(0, str(COMMON_LIB))
 
-from agent_hub_common import (  # noqa: E402
-    DATA_SOURCE_KEY,
-    DEFAULT_VERSION,
-    PRIORITY_ORDER,
-    STATUS_ORDER,
-    TOKEN_KEY,
-    NotionClient,
-    is_unassigned,
-    load_config,
-    parse_notion_datetime,
-    prop_datetime,
-    prop_relation_ids,
-    prop_text,
-)
+from agent_hub_common import STATUS_ORDER  # noqa: E402
 from file_hub_common import (  # noqa: E402
-    has_file_hub,
     issue_sort_key as file_issue_sort_key,
+    load_change,
     load_issues as load_file_issues,
     readiness as file_readiness,
     resolve_hub_path,
 )
 
 
-@dataclass
-class Issue:
-    id: str
-    url: str
-    title: str
-    status: str
-    owner: str
-    priority: str
-    type: str
-    area: str
-    summary: str
-    blockers: str
-    dependency_notes: str
-    depends_on: list[str]
-    blocks: list[str]
-    updated_at: datetime | None
-    claim_id: str
-    claim_expires_at: datetime | None
-
-    @classmethod
-    def from_page(cls, page: dict[str, Any]) -> "Issue":
-        props = page.get("properties", {})
-        return cls(
-            id=page.get("id", ""),
-            url=page.get("url", ""),
-            title=prop_text(props.get("Title")) or "(Untitled)",
-            status=prop_text(props.get("Status")) or "-",
-            owner=prop_text(props.get("Owner")),
-            priority=prop_text(props.get("Priority")),
-            type=prop_text(props.get("Type")),
-            area=prop_text(props.get("Area")),
-            summary=prop_text(props.get("Summary")),
-            blockers=prop_text(props.get("Blockers")),
-            dependency_notes=prop_text(props.get("Dependency Notes")),
-            depends_on=prop_relation_ids(props.get("Depends On")),
-            blocks=prop_relation_ids(props.get("Blocks")),
-            updated_at=prop_datetime(props.get("Updated At")) or page_last_edited(page),
-            claim_id=prop_text(props.get("Claim ID")),
-            claim_expires_at=prop_datetime(props.get("Claim Expires At")),
-        )
-
-
-def page_last_edited(page: dict[str, Any]) -> datetime | None:
-    return parse_notion_datetime(page.get("last_edited_time"))
-
-
-def has_active_claim(issue: Issue, now: datetime | None = None) -> bool:
-    if not issue.claim_id:
-        return False
-    if not issue.claim_expires_at:
-        return True
-    now = now or datetime.now(timezone.utc)
-    return issue.claim_expires_at > now
-
-
-def readiness(issue: Issue, by_id: dict[str, Issue]) -> tuple[str, str]:
-    if issue.status == "In Review":
-        reasons: list[str] = []
-        if issue.owner and not is_unassigned(issue.owner):
-            reasons.append(f"owned by {issue.owner}")
-        if has_active_claim(issue):
-            reasons.append("active claim")
-        if reasons:
-            return "Blocked", "; ".join(reasons)
-        return "Ready", "ready for review"
-    if issue.status != "Not Started":
-        return "-", ""
-    reasons: list[str] = []
-    if issue.owner and not is_unassigned(issue.owner):
-        reasons.append(f"owned by {issue.owner}")
-    if issue.blockers:
-        reasons.append("external blocker")
-    if has_active_claim(issue):
-        reasons.append("active claim")
-    unknown_deps: list[str] = []
-    incomplete_deps: list[str] = []
-    for dep_id in issue.depends_on:
-        dep = by_id.get(dep_id)
-        if not dep:
-            unknown_deps.append(dep_id)
-        elif dep.status != "Completed":
-            incomplete_deps.append(dep.title)
-    if unknown_deps:
-        return "Unknown", "dependency status unavailable"
-    if incomplete_deps:
-        reasons.append("waiting on " + ", ".join(incomplete_deps))
-    if reasons:
-        return "Blocked", "; ".join(reasons)
-    return "Ready", ""
-
-
-def issue_sort_key(issue: Issue) -> tuple[int, int, float]:
-    status_index = STATUS_ORDER.index(issue.status) if issue.status in STATUS_ORDER else len(STATUS_ORDER)
-    priority_index = PRIORITY_ORDER.get(issue.priority, 99)
-    updated = issue.updated_at.timestamp() if issue.updated_at else 0
-    return (status_index, priority_index, -updated)
-
-
 def apply_filters(
-    issues: list[Issue], by_id: dict[str, Issue], args: argparse.Namespace
-) -> list[tuple[Issue, str, str]]:
-    rows: list[tuple[Issue, str, str]] = []
+    issues: list[Any], by_id: dict[str, Any], args: argparse.Namespace
+) -> list[tuple[Any, str, str]]:
+    rows: list[tuple[Any, str, str]] = []
     for issue in issues:
-        ready, reason = readiness(issue, by_id)
+        ready, reason = file_readiness(issue, by_id)
+        if getattr(args, "change", None) and issue.change != args.change:
+            continue
         if args.status and issue.status != args.status:
             continue
         if args.owner and args.owner.lower() not in issue.owner.lower():
@@ -165,7 +53,7 @@ def short(value: str, limit: int = 48) -> str:
     return value if len(value) <= limit else value[: limit - 1].rstrip() + "..."
 
 
-def dependency_titles(ids: list[str], by_id: dict[str, Issue]) -> str:
+def dependency_titles(ids: list[str], by_id: dict[str, Any]) -> str:
     if not ids:
         return "-"
     return ", ".join(short(by_id.get(item_id).title if item_id in by_id else item_id, 28) for item_id in ids)
@@ -174,8 +62,8 @@ def dependency_titles(ids: list[str], by_id: dict[str, Issue]) -> str:
 def render_board(
     lines: list[str],
     title: str,
-    rows: list[tuple[Issue, str, str]],
-    by_id: dict[str, Issue],
+    rows: list[tuple[Any, str, str]],
+    by_id: dict[str, Any],
     start_number: int,
 ) -> int:
     lines.append(f"### {title}")
@@ -201,7 +89,12 @@ def render_board(
     return number
 
 
-def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit: int) -> str:
+def markdown(
+    rows: list[tuple[Any, str, str]],
+    by_id: dict[str, Any],
+    limit: int,
+    change: str = "",
+) -> str:
     counts = {status: 0 for status in STATUS_ORDER}
     for issue, _, _ in rows:
         if issue.status in counts:
@@ -214,6 +107,9 @@ def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit:
     eligible_in_review_visible = eligible_in_review_rows[:limit]
     blocked_visible = blocked_rows[:limit]
     lines = ["## Agent Hub Issues", ""]
+    if change:
+        lines.append(f"Change filter: `{change}`")
+        lines.append("")
     lines.append(
         "Counts: "
         + " | ".join(f"{status} `{counts[status]}`" for status in STATUS_ORDER)
@@ -250,7 +146,7 @@ def markdown(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit: int | None = None) -> str:
+def json_rows(rows: list[tuple[Any, str, str]], by_id: dict[str, Any], limit: int | None = None) -> str:
     payload = []
     visible_rows = rows[:limit] if limit is not None else rows
     for issue, ready, reason in visible_rows:
@@ -262,6 +158,7 @@ def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit
                 "status": issue.status,
                 "owner": issue.owner,
                 "priority": issue.priority,
+                "change": getattr(issue, "change", ""),
                 "type": issue.type,
                 "area": issue.area,
                 "summary": issue.summary,
@@ -288,95 +185,41 @@ def json_rows(rows: list[tuple[Issue, str, str]], by_id: dict[str, Issue], limit
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--backend",
-        choices=["auto", "file", "notion"],
-        default="auto",
-        help="Use repo .hub files, Notion, or auto-detect .hub/config.yml first.",
-    )
+    parser.add_argument("--backend", choices=["auto", "file"], default="auto")
     parser.add_argument("--hub-root", type=Path, help="Path to a repo-native .hub directory.")
-    parser.add_argument(
-        "--data-source-id",
-        "--source",
-        help=f"Notion data source ID or URL. Defaults to {DATA_SOURCE_KEY} from Agent Hub config.",
-    )
     parser.add_argument("--status", choices=STATUS_ORDER)
     parser.add_argument("--owner")
     parser.add_argument("--priority", choices=["P0", "P1", "P2", "P3"])
+    parser.add_argument("--change", help="Repo-native change packet slug to filter by.")
     parser.add_argument("--type")
     parser.add_argument("--area")
     parser.add_argument("--readiness", choices=["Ready", "Blocked", "Unknown"])
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     parser.add_argument("--limit", type=int, default=30)
-    parser.add_argument("--notion-version", default=os.environ.get("NOTION_VERSION", DEFAULT_VERSION))
-    parser.add_argument("--env-path", type=Path)
     return parser
-
-
-def should_use_file_backend(args: argparse.Namespace) -> bool:
-    if args.backend == "file":
-        return True
-    if args.backend == "notion":
-        return False
-    return has_file_hub(hub_root=args.hub_root)
 
 
 def load_file_rows(args: argparse.Namespace) -> tuple[list[tuple[Any, str, str]], dict[str, Any]]:
     hub_path = resolve_hub_path(hub_root=args.hub_root)
+    if args.change:
+        try:
+            load_change(hub_path, args.change)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
     issues = load_file_issues(hub_path)
     issues.sort(key=file_issue_sort_key)
     by_id = {issue.id: issue for issue in issues}
-    rows: list[tuple[Any, str, str]] = []
-    for issue in issues:
-        ready, reason = file_readiness(issue, by_id)
-        if args.status and issue.status != args.status:
-            continue
-        if args.owner and args.owner.lower() not in issue.owner.lower():
-            continue
-        if args.priority and issue.priority != args.priority:
-            continue
-        if args.type and issue.type != args.type:
-            continue
-        if args.area and args.area.lower() not in issue.area.lower():
-            continue
-        if args.readiness and ready.lower() != args.readiness.lower():
-            continue
-        rows.append((issue, ready, reason))
-    return rows, by_id
+    return apply_filters(issues, by_id, args), by_id
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if should_use_file_backend(args):
-        rows, by_id = load_file_rows(args)
-        if args.format == "json":
-            print(json_rows(rows, by_id, args.limit))
-        else:
-            print(markdown(rows, by_id, args.limit))
-        return 0
-
-    values = load_config(args.env_path)
-    token = values.get(TOKEN_KEY) or values.get("NOTION_TOKEN")
-    if not token:
-        raise SystemExit("Missing NOTION_AGENT_HUB_TOKEN. Run setup-agent-hub first.")
-    data_source_id = args.data_source_id or values.get(DATA_SOURCE_KEY)
-    if not data_source_id:
-        raise SystemExit(
-            f"Missing data source. Run setup-agent-hub or pass --data-source-id."
-        )
-
-    client = NotionClient(token, args.notion_version)
-    pages = client.query_data_source(data_source_id)
-    issues = [Issue.from_page(page) for page in pages]
-    issues.sort(key=issue_sort_key)
-    by_id = {issue.id: issue for issue in issues}
-    rows = apply_filters(issues, by_id, args)
-
+    rows, by_id = load_file_rows(args)
     if args.format == "json":
         print(json_rows(rows, by_id, args.limit))
     else:
-        print(markdown(rows, by_id, args.limit))
+        print(markdown(rows, by_id, args.limit, args.change or ""))
     return 0
 
 

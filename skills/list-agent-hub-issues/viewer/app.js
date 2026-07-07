@@ -2,6 +2,8 @@
   const state = {
     payload: null,
     selectedId: "",
+    dataUrl: "",
+    livePollTimer: 0,
     filters: {
       change: "",
       priority: "",
@@ -36,25 +38,88 @@
 
   function queryDataUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.get("data") || "./hub-state.json";
+    if (params.get("data")) return params.get("data");
+    if (window.location.protocol === "http:" || window.location.protocol === "https:") return "/api/state";
+    return "./hub-state.json";
   }
 
-  async function loadPayload() {
-    const primaryUrl = queryDataUrl();
-    try {
-      const response = await fetch(primaryUrl, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`${primaryUrl} returned ${response.status}`);
-      }
-      return response.json();
-    } catch (error) {
-      showError(`Using bundled sample state because ${error.message}.`);
-      const sampleResponse = await fetch("./hub-state.sample.json", { cache: "no-store" });
-      if (!sampleResponse.ok) {
-        throw new Error("Unable to load dashboard state or bundled sample state.");
-      }
-      return sampleResponse.json();
+  function hasCustomDataUrl() {
+    return new URLSearchParams(window.location.search).has("data");
+  }
+
+  function fallbackDataUrls(primaryUrl) {
+    const urls = [primaryUrl];
+    if (primaryUrl !== "./hub-state.json") urls.push("./hub-state.json");
+    urls.push("./hub-state.sample.json");
+    return urls;
+  }
+
+  async function fetchPayload(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}`);
     }
+    return response.json();
+  }
+
+  async function loadPayload({ silent = false } = {}) {
+    const primaryUrl = state.dataUrl || queryDataUrl();
+    let firstError = null;
+    for (const url of fallbackDataUrls(primaryUrl)) {
+      try {
+        const payload = await fetchPayload(url);
+        state.dataUrl = url;
+        if (!silent) clearError();
+        return payload;
+      } catch (error) {
+        firstError = firstError || error;
+      }
+    }
+    if (!silent && firstError) {
+      showError(`Unable to load dashboard state because ${firstError.message}.`);
+    }
+    throw firstError || new Error("Unable to load dashboard state.");
+  }
+
+  async function refreshPayload() {
+    try {
+      const previousSelectedId = state.selectedId;
+      state.payload = await loadPayload({ silent: true });
+      renderFilters(state.payload);
+      if (previousSelectedId && allIssues().some((issue) => issue.id === previousSelectedId)) {
+        state.selectedId = previousSelectedId;
+      }
+      render();
+      clearError();
+    } catch (error) {
+      showError(`Live refresh failed because ${error.message}.`);
+    }
+  }
+
+  function bindLiveUpdates() {
+    if (hasCustomDataUrl() || state.dataUrl !== "/api/state") return;
+    if (typeof EventSource === "undefined") {
+      startLivePolling();
+      return;
+    }
+    const events = new EventSource("/api/events");
+    events.addEventListener("revision", () => {
+      refreshPayload();
+    });
+    events.addEventListener("error", () => {
+      showError("Live updates disconnected; the current snapshot remains visible.");
+      startLivePolling();
+    });
+  }
+
+  function startLivePolling() {
+    if (state.livePollTimer) return;
+    state.livePollTimer = window.setInterval(refreshPayload, 2000);
+  }
+
+  function clearError() {
+    elements.errorBanner.hidden = true;
+    elements.errorBanner.textContent = "";
   }
 
   function showError(message) {
@@ -332,6 +397,7 @@ Expected: ${escapeHtml(final.expected_result || "-")}</pre>
     const firstIssue = allIssues()[0];
     state.selectedId = firstIssue ? firstIssue.id : "";
     render();
+    bindLiveUpdates();
   }
 
   init().catch((error) => {

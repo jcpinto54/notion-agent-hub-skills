@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Agent Hub App"
+  short_description: "Start the read-only Agent Hub viewer"
+  default_prompt: "Use $run-agent-hub-app to export the current hub dashboard and start the local read-only viewer."
