@@ -1,0 +1,9 @@
+{
+  "name": "notion-agent-hub-skills",
+  "mode": "managed",
+  "dependencies": {
+    "tessl/plugin-creator": {
+      "version": "0.1.0"
+    }
+  }
+}
