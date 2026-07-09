@@ -5,3 +5,22 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+# Tessl-managed local skill adapters
+/.agents/skills/.gitignore
+/.agents/skills/tessl__*
+/.agents/skills/tessl:*
+/.claude/skills/.gitignore
+/.claude/skills/tessl__*
+/.claude/skills/tessl:*
+/.codex/skills/.gitignore
+/.codex/skills/tessl__*
+/.codex/skills/tessl:*
+/.cursor/skills/.gitignore
+/.cursor/skills/tessl__*
+/.cursor/skills/tessl:*
+/.github/skills/.gitignore
+/.github/skills/tessl__*
+/.github/skills/tessl:*
+
+# Local agent worktrees
+/.claude/worktrees/
